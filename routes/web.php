@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\FingerprintController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -23,7 +24,7 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(
             when(
                 Features::canManageTwoFactorAuthentication()
-                    && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
+                && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword'),
                 ['password.confirm'],
                 [],
             ),
@@ -31,7 +32,13 @@ Route::middleware(['auth'])->group(function () {
         ->name('two-factor.show');
 });
 
-// Route untuk menerima data dari mesin fingerprint
-Route::post('/iclock/cdata.aspx', [App\Http\Controllers\FingerprintController::class, 'receiveData']);
+// Group all iclock routes under the log.iclock middleware
+Route::middleware(['log.iclock'])->group(function () {
+    /// Route untuk mesin "bertanya" / check-in
+    Route::get('iclock/getrequest', [FingerprintController::class, 'getRequest']);
 
-require __DIR__.'/auth.php';
+    // Route untuk mesin "mengirim data" absensi
+    Route::post('iclock/cdata', [FingerprintController::class, 'cData']);
+});
+
+require __DIR__ . '/auth.php';

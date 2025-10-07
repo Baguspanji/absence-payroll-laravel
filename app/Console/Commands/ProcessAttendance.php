@@ -7,17 +7,13 @@ use Illuminate\Support\Facades\DB;
 
 class ProcessAttendance extends Command
 {
-    // Nama command kita yang akan dipanggil di terminal
-    protected $signature = 'app:process-attendance';
-
-    // Deskripsi command
-    protected $description = 'Merekapitulasi data absensi mentah menjadi laporan harian';
+    protected $signature   = 'app:process-attendance';
+    protected $description = 'Merekapitulasi data absensi mentah menjadi laporan harian yang akurat';
 
     public function handle()
     {
         $this->info('Memulai proses rekapitulasi absensi...');
 
-        // Ambil semua data absensi mentah yang belum diproses
         $rawAttendances = DB::table('attendances')
             ->where('is_processed', false)
             ->orderBy('timestamp', 'asc')
@@ -32,32 +28,35 @@ class ProcessAttendance extends Command
         $attendancesByUser = $rawAttendances->groupBy('employee_nip');
 
         foreach ($attendancesByUser as $nip => $attendances) {
+            // Cari data karyawan dan cabang berdasarkan NIP
+            $employee = DB::table('employees')->where('nip', $nip)->first();
+            if (! $employee) {
+                $this->warn("Karyawan dengan NIP {$nip} tidak ditemukan. Melewatkan...");
+                continue;
+            }
+
             // Kelompokkan lagi berdasarkan tanggal
             $attendancesByDate = $attendances->groupBy(function ($item) {
                 return Carbon::parse($item->timestamp)->format('Y-m-d');
             });
 
             foreach ($attendancesByDate as $date => $dailyAttendances) {
-                // Asumsi: scan pertama adalah jam masuk, scan terakhir adalah jam pulang
-                $clockIn  = $dailyAttendances->first();
-                $clockOut = $dailyAttendances->count() > 1 ? $dailyAttendances->last() : null;
+                // LOGIKA BARU: Cari jam masuk dan pulang berdasarkan status_scan
+                $clockInRecord  = $dailyAttendances->where('status_scan', '0')->first(); // Scan masuk pertama
+                $clockOutRecord = $dailyAttendances->where('status_scan', '1')->last();  // Scan pulang terakhir
 
-                // Ambil informasi device dari data absensi
-                $deviceSN   = $clockIn->device_sn ?? 'UNKNOWN';
-                $deviceInfo = $clockIn->device_info ?? '';
-
+                // Simpan ke tabel rekapitulasi
                 DB::table('attendance_summaries')->updateOrInsert(
                     [
-                        'employee_nip' => $nip,
-                        'date'         => $date,
+                        'employee_id' => $employee->id,
+                        'date'        => $date,
                     ],
                     [
-                        'clock_in'    => Carbon::parse($clockIn->timestamp)->toTimeString(),
-                        'clock_out'   => $clockOut ? Carbon::parse($clockOut->timestamp)->toTimeString() : null,
-                        'device_sn'   => $deviceSN,
-                        'device_info' => $deviceInfo,
-                        'created_at'  => now(),
-                        'updated_at'  => now(),
+                        'branch_id'  => $employee->branch_id,
+                        'clock_in'   => $clockInRecord ? Carbon::parse($clockInRecord->timestamp)->toTimeString() : null,
+                        'clock_out'  => $clockOutRecord ? Carbon::parse($clockOutRecord->timestamp)->toTimeString() : null,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]
                 );
             }

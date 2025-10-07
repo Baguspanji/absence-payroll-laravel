@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('attendances', function (Blueprint $table) {
+        Schema::create('devices', function (Blueprint $table) {
             $table->id();
-            $table->string('employee_nip');
-            $table->timestamp('timestamp');
-            $table->string('status_scan');
-            $table->string('device_sn')->nullable();
-            $table->boolean('is_processed')->default(false);
+            $table->string('name');                                  // Nama mesin yg mudah diingat, cth: "Pintu Depan Kantor A"
+            $table->string('serial_number')->unique();               // Serial Number unik dari mesin
+            $table->foreignId('branch_id')->constrained('branches'); // Relasi ke cabang
             $table->timestamps();
         });
     }
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('attendances');
+        Schema::dropIfExists('devices');
     }
 };

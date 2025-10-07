@@ -1,84 +1,88 @@
 <?php
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class FingerprintController extends Controller
 {
-    public function receiveData(Request $request)
+    /**
+     * Menangani request check-in dari mesin (GET /iclock/getrequest).
+     * Server akan memberikan perintah kembali ke mesin.
+     */
+    public function getRequest(Request $request)
     {
-        Log::info('Fingerprint data received', [
-            'method' => $request->method(),
-            'path'   => $request->path(),
-            'query'  => $request->query(),
-            'body'   => $request->all(),
-        ]);
+        // Log bahwa mesin berhasil check-in
+        // Log::info('Device check-in:', $request->query());
 
-        // Handle different ADMS request types
-        if ($request->path() == 'iclock/getrequest') {
-            return $this->handleGetRequest($request);
-        } elseif ($request->path() == 'iclock/cdata') {
-            return $this->handleCData($request);
-        }
+        // Perintah untuk mesin: "Kirimkan data absensi (ATTLog) yang baru"
+        // C:1: adalah ID perintah, ini bisa random.
+        // $response = "C:1:DATA QUERY ATTLog startDate=" . now()->subDay()->format('Y-m-d') . "\tendDate=" . now()->format('Y-m-d');
+        $response = "OK";
 
-        return response('OK');
+        return $this->getResponse($response);
     }
 
-    private function handleGetRequest(Request $request)
+    /**
+     * Menangani kiriman data dari mesin (POST /iclock/cdata).
+     */
+    public function cData(Request $request)
     {
-        // Extract device information
-        $deviceSN   = $request->query('SN');
-        $deviceInfo = $request->query('INFO');
+        // ==================================================================
+        // BARIS BARU: Ambil Serial Number (SN) dari query string URL
+        $serialNumber = $request->query('SN');
+        // ==================================================================
 
-        // Store or update device information
-        DB::table('devices')->updateOrInsert(
-            ['serial_number' => $deviceSN],
-            [
-                'info'       => $deviceInfo,
-                'last_seen'  => now(),
-                'updated_at' => now(),
-            ]
-        );
+        $rawData = $request->getContent();
+        Log::info("Menerima data dari SN: {$serialNumber}", ['body' => $rawData]);
 
-        // Return appropriate response for the device
-        return response('OK');
-    }
+        $lines = explode("\r\n", $rawData);
 
-    private function handleCData(Request $request)
-    {
-        $deviceSN = $request->query('SN');
-        $data     = $request->input('data');
+        foreach ($lines as $line) {
+            if (trim($line) === "" || str_starts_with($line, 'OPLOG')) {
+                continue;
+            }
 
-        if (empty($data)) {
-            return response('OK');
-        }
+            $data = explode("\t", $line);
 
-        // Process attendance data
-        foreach ($data as $record) {
-            // Example format: "TRANSACT FP 1 0 2023-10-07 08:30:25 123456"
-            // Where 123456 would be the employee ID/PIN
-            $parts = explode(' ', $record);
+            if (count($data) >= 4) {
+                $nip = $data[0];
+                $timestamp = $data[1];
+                $status_scan = $data[3];
 
-            if (count($parts) >= 7 && $parts[0] == 'TRANSACT') {
-                $timestamp   = $parts[5] . ' ' . $parts[6];
-                $employeePin = $parts[7] ?? null;
-
-                if ($employeePin) {
-                    // Store in attendance table
-                    DB::table('attendances')->insert([
-                        'employee_nip' => $employeePin,
-                        'device_sn'    => $deviceSN,
-                        'timestamp'    => Carbon::parse($timestamp),
-                        'is_processed' => false,
-                        'created_at'   => now(),
-                    ]);
-                }
+                DB::table('attendances')->insert([
+                    'employee_nip' => $nip,
+                    'timestamp'    => $timestamp,
+                    'status_scan'  => $status_scan,
+                    'device_sn'    => $serialNumber, // <-- SIMPAN SN DI SINI
+                    'is_processed' => false,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
             }
         }
 
-        return response('OK');
+        return $this->getResponse("OK");
+    }
+
+    private function getResponse($response, $status = 200)
+    {
+        // set date to GMT
+        date_default_timezone_set('GMT');
+        $date = date('D, d M Y H:i:s T');
+
+        // set date to Asia/Jakarta
+        date_default_timezone_set('Asia/Jakarta');
+
+        $status = $response ? 200 : 400;
+
+        return response($response, $status)
+            ->header('Date', $date)
+            ->header('Content-Type', 'text/plain')
+            ->header('Content-Length', strlen($response))
+            ->header('Connection', 'close')
+            ->header('Pragma', 'no-cache')
+            ->header('Cache-Control', 'no-store');
     }
 }

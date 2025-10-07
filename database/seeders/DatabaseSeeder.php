@@ -19,5 +19,19 @@ class DatabaseSeeder extends Seeder
             'name' => 'Administrator',
             'email' => 'admin@admin.com',
         ]);
+
+        // create branchs row
+        \App\Models\Branch::create([
+            'name' => 'Head Office',
+            'address' => 'Jl. Merdeka No. 1, Jakarta',
+        ]);
+
+        // create employees row
+        \App\Models\Employee::create([
+            'nip' => '1',
+            'user_id' => 1,
+            'name' => 'John Doe',
+            'branch_id' => 1,
+        ]);
     }
 }

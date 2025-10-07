@@ -14,11 +14,12 @@ return new class extends Migration
         Schema::create('attendance_summaries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
+            $table->foreignId('branch_id')->after('employee_id')->constrained('branches');
             $table->timestamp('date');
             $table->string('clock_in');
             $table->string('clock_out');
-            $table->float('minutes_late');
-            $table->float('overtime_hours');
+            $table->integer('minutes_late')->default(0);
+            $table->integer('overtime_hours')->default(0);
             $table->timestamps();
         });
     }

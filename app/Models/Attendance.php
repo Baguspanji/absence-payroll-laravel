@@ -15,6 +15,7 @@ class Attendance extends Model
         'employee_nip',
         'timestamp',
         'status_scan',
+        'device_sn',
         'is_processed',
     ];
 
