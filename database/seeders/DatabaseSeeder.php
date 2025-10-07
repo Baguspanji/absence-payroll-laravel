@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             'nip' => '1',
             'user_id' => 1,
             'name' => 'John Doe',
+            'position' => 'Manager',
             'branch_id' => 1,
         ]);
 

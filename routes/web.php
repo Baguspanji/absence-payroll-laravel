@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\FingerprintController;
+use App\Http\Controllers\PayrollController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -38,6 +39,8 @@ Route::middleware(['auth'])->group(function () {
 
         Volt::route('payroll/generate', 'payroll.generator')->name('admin.payroll.generator');
     });
+
+    Route::get('/payroll/{payroll}/slip', [PayrollController::class, 'showSlip'])->name('payroll.slip');
 
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');
 

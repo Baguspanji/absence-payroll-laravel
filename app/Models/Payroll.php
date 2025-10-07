@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +18,20 @@ class Payroll extends Model
         'period_end',
         'net_salary',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'period_start' => 'date',
+            'period_end'   => 'date',
+            'net_salary'   => 'decimal:2',
+        ];
+    }
 
     public function employee(): BelongsTo
     {
