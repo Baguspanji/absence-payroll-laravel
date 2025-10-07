@@ -41,9 +41,62 @@ class ProcessAttendance extends Command
             });
 
             foreach ($attendancesByDate as $date => $dailyAttendances) {
-                // LOGIKA BARU: Cari jam masuk dan pulang berdasarkan status_scan
+                // Cari jadwal shift karyawan pada hari itu
+                $schedule = DB::table('schedules')
+                    ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
+                    ->where('employee_id', $employee->id)
+                    ->where('date', $date)
+                    ->select('shifts.clock_in', 'shifts.clock_out')
+                    ->first();
+
+                if (! $schedule) {
+                    $this->warn("Jadwal shift untuk karyawan NIP {$nip} pada tanggal {$date} tidak ditemukan. Melewatkan...");
+                    continue;
+                }
+
+                                                                                         // LOGIKA BARU: Cari jam masuk dan pulang berdasarkan status_scan
                 $clockInRecord  = $dailyAttendances->where('status_scan', '0')->first(); // Scan masuk pertama
                 $clockOutRecord = $dailyAttendances->where('status_scan', '1')->last();  // Scan pulang terakhir
+
+                $lateMinutes   = 0;
+                $overtimeHours = 0;
+
+                // --- LOGIKA KALKULASI KETERLAMBATAN ---
+                if ($clockInRecord) {
+                    $clockInTime    = Carbon::parse($clockInRecord->timestamp);
+                    $shiftStartTime = Carbon::parse($date . ' ' . $schedule->clock_in);
+
+                    // Toleransi 15 menit
+                    if ($clockInTime->isAfter($shiftStartTime->addMinutes(15))) {
+                        $lateMinutes = $clockInTime->diffInMinutes($shiftStartTime->subMinutes(15));
+                    }
+                }
+
+                // --- LOGIKA KALKULASI LEMBUR (VERSI SEDERHANA) ---
+
+                // 1. Cek apakah ada izin lembur yang sudah disetujui untuk hari ini
+                $isOvertimeApproved = DB::table('overtime_requests')
+                    ->where('employee_id', $employee->id)
+                    ->where('date', $date)
+                    ->where('status', 'approved')
+                    ->exists();
+
+                // 2. Jika disetujui, baru jalankan kalkulasi
+                if ($isOvertimeApproved && $clockOutRecord) {
+                    $schedule = DB::table('schedules')
+                        ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
+                        ->where('employee_id', $employee->id)->where('date', $date)
+                        ->select('shifts.jam_pulang')->first();
+
+                    if ($schedule) {
+                        $clockOutTime = Carbon::parse($clockOutRecord->timestamp);
+                        $shiftEndTime = Carbon::parse($date . ' ' . $schedule->jam_pulang);
+
+                        if ($clockOutTime->isAfter($shiftEndTime)) {
+                            $overtimeHours = round($clockOutTime->diffInMinutes($shiftEndTime) / 60, 2);
+                        }
+                    }
+                }
 
                 // Simpan ke tabel rekapitulasi
                 DB::table('attendance_summaries')->updateOrInsert(
@@ -52,11 +105,13 @@ class ProcessAttendance extends Command
                         'date'        => $date,
                     ],
                     [
-                        'branch_id'  => $employee->branch_id,
-                        'clock_in'   => $clockInRecord ? Carbon::parse($clockInRecord->timestamp)->toTimeString() : null,
-                        'clock_out'  => $clockOutRecord ? Carbon::parse($clockOutRecord->timestamp)->toTimeString() : null,
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'branch_id'      => $employee->branch_id,
+                        'clock_in'       => $clockInRecord ? Carbon::parse($clockInRecord->timestamp)->toTimeString() : null,
+                        'clock_out'      => $clockOutRecord ? Carbon::parse($clockOutRecord->timestamp)->toTimeString() : null,
+                        'late_minutes'   => $lateMinutes,
+                        'overtime_hours' => $overtimeHours,
+                        'created_at'     => now(),
+                        'updated_at'     => now(),
                     ]
                 );
             }

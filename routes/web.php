@@ -33,9 +33,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware(['is_admin'])->prefix('admin')->group(function () {
         Volt::route('persetujuan-cuti', 'leaves.approval')->name('admin.leaves.approval');
+
+        Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
     });
 
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');
+
+    Volt::route('ajukan-lembur', 'overtime.request-form')->name('overtime.create');
 });
 
 // Group all iclock routes under the log.iclock middleware

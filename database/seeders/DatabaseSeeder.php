@@ -34,5 +34,19 @@ class DatabaseSeeder extends Seeder
             'name' => 'John Doe',
             'branch_id' => 1,
         ]);
+
+        // create shifts row
+        \App\Models\Shift::create([
+            'name' => 'Shift Pagi',
+            'clock_in' => '08:00:00',
+            'clock_out' => '17:00:00',
+        ]);
+
+        // create schedules row
+        \App\Models\Schedule::create([
+            'employee_id' => 1,
+            'shift_id' => 1,
+            'date' => date('Y-m-d'),
+        ]);
     }
 }

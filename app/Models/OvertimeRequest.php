@@ -4,7 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AttendanceSummary extends Model
+class OvertimeRequest extends Model
 {
     /**
      * The attributes that are mass assignable.
@@ -13,21 +13,13 @@ class AttendanceSummary extends Model
      */
     protected $fillable = [
         'employee_id',
-        'branch_id',
         'date',
-        'clock_in',
-        'clock_out',
-        'late_minutes',
-        'overtime_hours',
+        'reason',
+        'status_approval',
     ];
 
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
-    }
-
-    public function branch(): BelongsTo
-    {
-        return $this->belongsTo(Branch::class);
     }
 }
