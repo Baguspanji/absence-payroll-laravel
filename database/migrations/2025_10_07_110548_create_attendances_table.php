@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('employee_nip');
             $table->timestamp('timestamp');
             $table->string('status_scan');
+            $table->boolean('is_processed')->default(false);
             $table->timestamps();
         });
     }

@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -9,37 +10,75 @@ class FingerprintController extends Controller
 {
     public function receiveData(Request $request)
     {
-        // Ambil data mentah dari body request
-        $rawData = $request->getContent();
+        Log::info('Fingerprint data received', [
+            'method' => $request->method(),
+            'path'   => $request->path(),
+            'query'  => $request->query(),
+            'body'   => $request->all(),
+        ]);
 
-        // Log data mentah untuk debugging
-        Log::info('Data dari fingerprint: ' . $rawData);
+        // Handle different ADMS request types
+        if ($request->path() == 'iclock/getrequest') {
+            return $this->handleGetRequest($request);
+        } elseif ($request->path() == 'iclock/cdata') {
+            return $this->handleCData($request);
+        }
 
-        // Data dari mesin biasanya berupa plain text, perlu kita parsing
-        // Formatnya kira-kira: "PIN=1234\tTime=2025-10-07 17:30:00\tStatus=1"
-        $lines = explode("\r\n", $rawData);
+        return response('OK');
+    }
 
-        foreach ($lines as $line) {
-            if (trim($line) != "") {
-                $data  = [];
-                $pairs = explode("\t", $line);
-                foreach ($pairs as $pair) {
-                    list($key, $value) = explode("=", $pair, 2);
-                    $data[$key]        = $value;
+    private function handleGetRequest(Request $request)
+    {
+        // Extract device information
+        $deviceSN   = $request->query('SN');
+        $deviceInfo = $request->query('INFO');
+
+        // Store or update device information
+        DB::table('devices')->updateOrInsert(
+            ['serial_number' => $deviceSN],
+            [
+                'info'       => $deviceInfo,
+                'last_seen'  => now(),
+                'updated_at' => now(),
+            ]
+        );
+
+        // Return appropriate response for the device
+        return response('OK');
+    }
+
+    private function handleCData(Request $request)
+    {
+        $deviceSN = $request->query('SN');
+        $data     = $request->input('data');
+
+        if (empty($data)) {
+            return response('OK');
+        }
+
+        // Process attendance data
+        foreach ($data as $record) {
+            // Example format: "TRANSACT FP 1 0 2023-10-07 08:30:25 123456"
+            // Where 123456 would be the employee ID/PIN
+            $parts = explode(' ', $record);
+
+            if (count($parts) >= 7 && $parts[0] == 'TRANSACT') {
+                $timestamp   = $parts[5] . ' ' . $parts[6];
+                $employeePin = $parts[7] ?? null;
+
+                if ($employeePin) {
+                    // Store in attendance table
+                    DB::table('attendances')->insert([
+                        'employee_nip' => $employeePin,
+                        'device_sn'    => $deviceSN,
+                        'timestamp'    => Carbon::parse($timestamp),
+                        'is_processed' => false,
+                        'created_at'   => now(),
+                    ]);
                 }
-
-                // Simpan ke tabel 'attendances'
-                DB::table('attendances')->insert([
-                    'employee_nip' => $data['PIN'], // PIN di mesin adalah NIP karyawan
-                    'timestamp'    => $data['Time'],
-                    'status_scan'  => $data['Status'], // Status: 0=Masuk, 1=Pulang, dll.
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
-                ]);
             }
         }
 
-        // Mesin butuh response "OK" agar tahu datanya sudah diterima
-        return response("OK");
+        return response('OK');
     }
 }

@@ -15,5 +15,18 @@ class Attendance extends Model
         'employee_nip',
         'timestamp',
         'status_scan',
+        'is_processed',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_processed' => 'boolean',
+        ];
+    }
 }
