@@ -33,10 +33,14 @@
                     :current="request()->routeIs('overtime.create')" wire:navigate>{{ __('Pengajuan Lembur') }}
                 </flux:navlist.item>
 
-                {{-- create admin.payroll.generator --}}
                 <flux:navlist.item icon="circle-dollar-sign" :href="route('admin.payroll.generator')"
                     :current="request()->routeIs('admin.payroll.generator')" wire:navigate>
                     {{ __('Penggajian') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="file-text" :href="route('admin.payroll.report')"
+                    :current="request()->routeIs('admin.payroll.report')" wire:navigate>
+                    {{ __('Laporan Rekap Gaji') }}
                 </flux:navlist.item>
 
             </flux:navlist.group>
