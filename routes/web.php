@@ -31,4 +31,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('two-factor.show');
 });
 
+// Route untuk menerima data dari mesin fingerprint
+Route::post('/iclock/cdata.aspx', [App\Http\Controllers\FingerprintController::class, 'receiveData']);
+
 require __DIR__.'/auth.php';
