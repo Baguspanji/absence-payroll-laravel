@@ -4,9 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Payroll extends Model
+class EmployeePayrollComponent extends Model
 {
     /**
      * The attributes that are mass assignable.
@@ -15,9 +14,8 @@ class Payroll extends Model
      */
     protected $fillable = [
         'employee_id',
-        'period_start',
-        'period_end',
-        'net_salary',
+        'payroll_component_id',
+        'amount',
     ];
 
     public function employee(): BelongsTo
@@ -25,8 +23,8 @@ class Payroll extends Model
         return $this->belongsTo(Employee::class);
     }
 
-    public function details(): HasMany
+    public function payrollComponent(): BelongsTo
     {
-        return $this->hasMany(PayrollDetail::class);
+        return $this->belongsTo(PayrollComponent::class);
     }
 }

@@ -35,6 +35,8 @@ Route::middleware(['auth'])->group(function () {
         Volt::route('persetujuan-cuti', 'leaves.approval')->name('admin.leaves.approval');
 
         Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
+
+        Volt::route('payroll/generate', 'payroll.generator')->name('admin.payroll.generator');
     });
 
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');

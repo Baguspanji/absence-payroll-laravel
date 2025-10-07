@@ -48,5 +48,40 @@ class DatabaseSeeder extends Seeder
             'shift_id' => 1,
             'date' => date('Y-m-d'),
         ]);
+
+        // create payroll components
+        \App\Models\PayrollComponent::create([
+            'name' => 'Gaji Pokok',
+            'type' => 'earning',
+        ]);
+
+        \App\Models\PayrollComponent::create([
+            'name' => 'Tunjangan Transportasi',
+            'type' => 'earning',
+        ]);
+
+        \App\Models\PayrollComponent::create([
+            'name' => 'Potongan Absen',
+            'type' => 'deduction',
+        ]);
+
+        // create employee payroll components
+        \App\Models\EmployeePayrollComponent::create([
+            'employee_id' => 1,
+            'payroll_component_id' => 1,
+            'amount' => 5000000,
+        ]);
+
+        \App\Models\EmployeePayrollComponent::create([
+            'employee_id' => 1,
+            'payroll_component_id' => 2,
+            'amount' => 500000,
+        ]);
+
+        \App\Models\EmployeePayrollComponent::create([
+            'employee_id' => 1,
+            'payroll_component_id' => 3,
+            'amount' => 200000,
+        ]);
     }
 }

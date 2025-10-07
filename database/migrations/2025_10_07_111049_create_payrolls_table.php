@@ -14,8 +14,18 @@ return new class extends Migration
         Schema::create('payrolls', function (Blueprint $table) {
             $table->id();
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
-            $table->date('date');
-            $table->date('total_amount');
+            $table->date('period_start');
+            $table->date('period_end');
+            $table->decimal('net_salary', 15, 2); // Gaji bersih akhir
+            $table->timestamps();
+        });
+
+        Schema::create('payroll_details', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('payroll_id')->constrained('payrolls')->onDelete('cascade');
+            $table->string('description'); // Cth: "Gaji Pokok", "Potongan Terlambat"
+            $table->enum('type', ['earning', 'deduction']);
+            $table->decimal('amount', 15, 2);
             $table->timestamps();
         });
     }
@@ -25,6 +35,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('payroll_details');
         Schema::dropIfExists('payrolls');
     }
 };

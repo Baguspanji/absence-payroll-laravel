@@ -13,9 +13,17 @@ return new class extends Migration
     {
         Schema::create('payroll_components', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('type');
-            $table->float('amount');
+            $table->string('name')->unique();               // Cth: Gaji Pokok, Tunjangan Transport
+            $table->enum('type', ['earning', 'deduction']); // Jenis: pendapatan atau potongan
+            $table->boolean('is_fixed')->default(true);     // Apakah jumlahnya tetap atau dihitung harian (pro-rata)
+            $table->timestamps();
+        });
+
+        Schema::create('employee_payroll_components', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('employee_id')->constrained('employees')->onDelete('cascade');
+            $table->foreignId('payroll_component_id')->constrained('payroll_components')->onDelete('cascade');
+            $table->decimal('amount', 15, 2); // Jumlah spesifik untuk karyawan ini
             $table->timestamps();
         });
     }
@@ -25,6 +33,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('employee_payroll_components');
         Schema::dropIfExists('payroll_components');
     }
 };
