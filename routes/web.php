@@ -57,6 +57,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');
 
     Volt::route('ajukan-lembur', 'overtime.request-form')->name('overtime.create');
+
+    Volt::route('history-absensi', 'attedance.history')->name('attedance.history');
 });
 
 // Group all iclock routes under the log.iclock middleware

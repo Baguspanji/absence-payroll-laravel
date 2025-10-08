@@ -30,4 +30,9 @@ class Attendance extends Model
             'is_processed' => 'boolean',
         ];
     }
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_nip', 'nip');
+    }
 }

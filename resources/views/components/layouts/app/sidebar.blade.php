@@ -46,6 +46,10 @@
                 <!-- separator -->
                 <flux:separator />
 
+                <flux:navlist.item icon="notebook-text" :href="route('attedance.history')"
+                    :current="request()->routeIs('attedance.history')" wire:navigate>{{ __('Riwayat Absensi') }}
+                </flux:navlist.item>
+
                 <flux:navlist.item icon="document-check" :href="route('admin.leaves.approval')"
                     :current="request()->routeIs('admin.leaves.approval')" wire:navigate>{{ __('Persetujuan Cuti') }}
                 </flux:navlist.item>
