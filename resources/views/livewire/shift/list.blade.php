@@ -32,7 +32,7 @@ new class extends Component {
         $this->isEdit = true;
 
         $this->name = $shift->name;
-        $this->clockIn = $shift->clock_id;
+        $this->clockIn = $shift->clock_in;
         $this->clockOut = $shift->clock_out;
 
         $this->modal('form-data')->show();
@@ -53,7 +53,7 @@ new class extends Component {
         } else {
             $user = Shift::find($this->shiftId);
             $user->name = $this->name;
-            $user->clock_id = $this->clockIn;
+            $user->clock_in = $this->clockIn;
             $user->clock_out = $this->clockOut;
             $user->save();
 

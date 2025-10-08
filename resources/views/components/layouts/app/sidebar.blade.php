@@ -23,14 +23,14 @@
                     {{ __('Daftar Cabang') }}
                 </flux:navlist.item>
 
-                <flux:navlist.item icon="user" :href="route('admin.user.index')"
-                    :current="request()->routeIs('admin.user.index')" wire:navigate>
-                    {{ __('Daftar Pengguna') }}
-                </flux:navlist.item>
-
                 <flux:navlist.item icon="file-clock" :href="route('admin.shift.index')"
                     :current="request()->routeIs('admin.shift.index')" wire:navigate>
                     {{ __('Daftar Aturan Shift') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="user" :href="route('admin.user.index')"
+                    :current="request()->routeIs('admin.user.index')" wire:navigate>
+                    {{ __('Daftar Pengguna') }}
                 </flux:navlist.item>
 
                 <flux:navlist.item icon="fingerprint" :href="route('admin.device.index')"

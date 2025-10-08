@@ -68,6 +68,11 @@ class User extends Authenticatable
         return $this->hasOne(Employee::class);
     }
 
+    public function schedule()
+    {
+        return $this->hasOne(Schedule::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

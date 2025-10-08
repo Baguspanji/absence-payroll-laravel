@@ -4,6 +4,8 @@ use Livewire\Volt\Component;
 use App\Models\User;
 use App\Models\Employee;
 use App\Models\Branch;
+use App\Models\Schedule;
+use App\Models\Shift;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 
@@ -20,12 +22,16 @@ new class extends Component {
     public $email = '';
     #[Rule('required', message: 'Akses harus dipilih.')]
     public $role = '';
+
+    public $position = '';
     #[Rule('required', message: 'Cabang harus dipilih.')]
     public $branchId = '';
 
-    public $position = '';
-
     public $branches = [];
+    #[Rule('required', message: 'Cabang harus dipilih.')]
+    public $shiftId = '';
+
+    public $shifts = [];
 
     public function mount()
     {
@@ -35,6 +41,15 @@ new class extends Component {
                     'value' => $branch->id,
                     'label' => $branch->name,
                     'description' => $branch->address,
+                ];
+            })
+            ->toArray();
+
+        $this->shifts = Shift::get()
+            ->map(function ($shift) {
+                return [
+                    'value' => $shift->id,
+                    'label' => $shift->name . '(' . $shift->clock_in . ' - ' . $shift->clock_out . ')',
                 ];
             })
             ->toArray();
@@ -53,6 +68,20 @@ new class extends Component {
         ];
     }
 
+    public function detail(User $user)
+    {
+        $this->userId = $user->id;
+
+        $this->nip = $user->employee?->nip;
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->role = $user->role;
+        $this->position = $user->employee?->position;
+        $this->branchId = $user->employee?->branch_id;
+
+        $this->modal('detail-data')->show();
+    }
+
     public function edit(User $user)
     {
         $this->userId = $user->id;
@@ -64,6 +93,7 @@ new class extends Component {
         $this->role = $user->role;
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
+        $this->shiftId = $user->employee?->schedule?->shift_id;
 
         $this->modal('form-data')->show();
     }
@@ -88,12 +118,18 @@ new class extends Component {
                 'role' => $this->role,
             ]);
 
-            Employee::create([
+            $employee = Employee::create([
                 'user_id' => $user->id,
                 'branch_id' => $this->branchId,
                 'nip' => $this->nip,
                 'name' => $this->name,
                 'position' => $this->position,
+            ]);
+
+            Schedule::create([
+                'employee_id' => $employee->id,
+                'shift_id' => $this->shiftId,
+                'date' => now()
             ]);
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil dibuat!', type: 'success');
@@ -110,6 +146,10 @@ new class extends Component {
             $employee->name = $this->name;
             $employee->position = $this->position;
             $employee->save();
+
+            $schedule = Schedule::where('employee_id', $employee->id)->first();
+            $schedule->shift_id = $this->shiftId;
+            $schedule->save();
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil diperbarui!', type: 'success');
         }
@@ -128,6 +168,7 @@ new class extends Component {
         $this->role = '';
         $this->branchId = '';
         $this->position = '';
+        $this->shiftId = '';
     }
 }; ?>
 
@@ -177,9 +218,14 @@ new class extends Component {
                                 </span>
                             @endif
                         </td>
-                        <td class="px-6 py-4 space-x-2">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <button wire:click="detail({{ $request->id }})"
+                                class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer">
+                                <flux:icon name="eye" class="w-4 h-4 inline-block -mt-1" />
+                                Detail
+                            </button>
                             <button wire:click="edit({{ $request->id }})"
-                                class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
+                                class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer">
                                 <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
                                 Edit
                             </button>
@@ -225,11 +271,104 @@ new class extends Component {
                 @endforeach
             </flux:select>
 
+            <flux:select label="Shift" wire:model="shiftId" placeholder="Pilih Shift...">
+                @foreach ($shifts as $item)
+                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
             <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
 
             <div class="flex">
                 <flux:spacer />
                 <flux:button type="button" wire:click="submit" variant="primary">Simpan</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Modal Detail -->
+    <flux:modal name="detail-data" class="md:w-4xl">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Detail Pengguna</flux:heading>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <div class="space-y-4 border-r pr-4">
+                    <div class="mb-4">
+                        <h3 class="font-semibold text-lg text-gray-800 mb-2">Informasi Karyawan</h3>
+                        <div class="grid grid-cols-3 gap-2 text-sm">
+                            <div>NIP/PIN</div>
+                            <div class="col-span-2">{{ $nip }}</div>
+
+                            <div>Nama</div>
+                            <div class="col-span-2">{{ $name }}</div>
+
+                            <div>Email</div>
+                            <div class="col-span-2">{{ $email }}</div>
+
+                            <div>Akses</div>
+                            <div class="col-span-2"><span
+                                    class="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-800">{{ strToUpper($role) }}</span>
+                            </div>
+
+                            <div>Cabang</div>
+                            <div class="col-span-2">
+                                @if ($branchId)
+                                    {{ collect($branches)->firstWhere('value', $branchId)['label'] ?? '' }}
+                                @endif
+                            </div>
+
+                            <div>Jabatan</div>
+                            <div class="col-span-2">{{ $position }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="mb-4">
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Jadwal Kerja</h3>
+                        @php
+                            $schedules = $userId
+                                ? \App\Models\Schedule::with('shift')->where('employee_id', $userId)->get()
+                                : collect([]);
+                        @endphp
+
+                        @if ($schedules->count() > 0)
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2">Shift</th>
+                                            <th class="px-3 py-2">Jam Masuk</th>
+                                            <th class="px-3 py-2">Jam Pulang</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($schedules as $schedule)
+                                            <tr class="bg-white border-b">
+                                                <td class="px-3 py-2">{{ $schedule->shift?->name }}</td>
+                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_in }}</td>
+                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_out }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="py-4 text-center text-gray-500 bg-gray-50 rounded">
+                                Tidak ada jadwal yang ditetapkan
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex">
+                <flux:spacer />
+                <flux:button type="button" x-on:click="$flux.modal('detail-data').close()" variant="ghost">
+                    Kembali
+                </flux:button>
             </div>
         </div>
     </flux:modal>
