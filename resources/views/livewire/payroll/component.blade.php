@@ -1,7 +1,7 @@
 <?php
 
 use Livewire\Volt\Component;
-use App\Models\Shift;
+use App\Models\PayrollComponent;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 
@@ -9,12 +9,12 @@ new class extends Component {
     use WithPagination;
 
     public $isEdit = false;
-    public $shiftId = null;
+    public $payrollComponentId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
     public $name = '';
     #[Rule('required', message: 'Nama harus diisi.')]
-    public $clockIn = '';
-    public $clockOut = '';
+    public $type = '';
+    public $isFixed = false;
 
     /**
      * Mengambil data pengajuan untuk ditampilkan.
@@ -22,18 +22,18 @@ new class extends Component {
     public function with(): array
     {
         return [
-            'requests' => Shift::query()->latest()->paginate(10),
+            'requests' => PayrollComponent::query()->latest()->paginate(10),
         ];
     }
 
-    public function edit(Shift $shift)
+    public function edit(PayrollComponent $payrollComponent)
     {
-        $this->shiftId = $shift->id;
+        $this->payrollComponentId = $payrollComponent->id;
         $this->isEdit = true;
 
-        $this->name = $shift->name;
-        $this->clockIn = $shift->clock_in;
-        $this->clockOut = $shift->clock_out;
+        $this->name = $payrollComponent->name;
+        $this->type = $payrollComponent->type;
+        $this->isFixed = $payrollComponent->is_fixed;
 
         $this->modal('form-data')->show();
     }
@@ -43,21 +43,21 @@ new class extends Component {
         $this->validate();
 
         if (!$this->isEdit) {
-            Shift::create([
+            PayrollComponent::create([
                 'name' => $this->name,
-                'clock_in' => $this->clockIn,
-                'clock_out' => $this->clockOut,
+                'type' => $this->type,
+                'is_fixed' => $this->isFixed,
             ]);
 
-            $this->dispatch('alert-shown', message: 'Data shift berhasil dibuat!', type: 'success');
+            $this->dispatch('alert-shown', message: 'Data master gaji berhasil dibuat!', type: 'success');
         } else {
-            $user = Shift::find($this->shiftId);
+            $user = PayrollComponent::find($this->payrollComponentId);
             $user->name = $this->name;
-            $user->clock_in = $this->clockIn;
-            $user->clock_out = $this->clockOut;
+            $user->type = $this->type;
+            $user->is_fixed = $this->isFixed;
             $user->save();
 
-            $this->dispatch('alert-shown', message: 'Data shift berhasil diperbarui!', type: 'success');
+            $this->dispatch('alert-shown', message: 'Data master gaji berhasil diperbarui!', type: 'success');
         }
 
         $this->modal('form-data')->close();
@@ -65,22 +65,22 @@ new class extends Component {
 
     public function resetForm()
     {
-        $this->shiftId = null;
+        $this->payrollComponentId = null;
         $this->isEdit = false;
 
         $this->name = '';
-        $this->clockIn = '';
-        $this->clockOut = '';
+        $this->type = '';
+        $this->isFixed = false;
     }
 }; ?>
 
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-2xl font-bold mb-4">Daftar Aturan Shift</h2>
+        <h2 class="text-2xl font-bold mb-4">Daftar Master Gaji</h2>
         <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
             x-on:click="$flux.modal('form-data').show(); $wire.resetForm();">
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
-            Tambah Shift
+            Tambah Master Gaji
         </button>
     </div>
 
@@ -88,9 +88,9 @@ new class extends Component {
         <table class="w-full text-sm text-left text-gray-500">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3">Nama Shift</th>
-                    <th scope="col" class="px-6 py-3">Jam Masuk</th>
-                    <th scope="col" class="px-6 py-3">Jam Pulang</th>
+                    <th scope="col" class="px-6 py-3">Nama Master</th>
+                    <th scope="col" class="px-6 py-3">Tipe</th>
+                    <th scope="col" class="px-6 py-3">Sifat Tetap</th>
                     <th scope="col" class="px-6 py-3">Aksi</th>
                 </tr>
             </thead>
@@ -98,8 +98,10 @@ new class extends Component {
                 @forelse ($requests as $request)
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->clock_in }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->clock_out }}</td>
+                        <td class="px-6 py-4">
+                            {{ $request->type == 'earning' ? 'Pendapatan' : 'Potongan' }}
+                        </td>
+                        <td class="px-6 py-4">{{ $request->is_fixed ? 'Ya' : 'Tidak' }}</td>
                         <td class="px-6 py-4 space-x-2">
                             <button wire:click="edit({{ $request->id }})"
                                 class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
@@ -111,7 +113,7 @@ new class extends Component {
                 @empty
                     <tr class="bg-white border-b">
                         <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data shift.
+                            Tidak ada data master.
                         </td>
                     </tr>
                 @endforelse
@@ -127,14 +129,21 @@ new class extends Component {
     <flux:modal name="form-data" class="md:w-96">
         <div class="space-y-4">
             <div>
-                <flux:heading size="lg">{{ $isEdit ? 'Edit Shift' : 'Tambah Shift' }}</flux:heading>
+                <flux:heading size="lg">{{ $isEdit ? 'Edit Master Gaji' : 'Tambah Master Gaji' }}</flux:heading>
             </div>
 
             <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />
 
-            <flux:input type="time" label="Jam Masuk" placeholder="Masukkan Jam Masuk" wire:model="clockIn" />
+            <flux:select label="Tipe" wire:model="type" placeholder="Pilih Tipe...">
+                <flux:select.option value="earning">Pendapatan</flux:select.option>
+                <flux:select.option value="deduction">Potongan</flux:select.option>
+            </flux:select>
 
-            <flux:input type="time" label="Jam Pulang" placeholder="Masukkan Jam Pulang" wire:model="clockOut" />
+            <flux:field variant="inline">
+                <flux:checkbox wire:model="isFixed" />
+                <flux:label>Sifat Gaji Tetap</flux:label>
+                <flux:error name="isFixed" />
+            </flux:field>
 
             <div class="flex">
                 <flux:spacer />

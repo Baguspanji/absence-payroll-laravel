@@ -37,6 +37,8 @@ Route::middleware(['auth'])->group(function () {
 
         Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
 
+        Volt::route('payroll/component', 'payroll.component')->name('admin.payroll.component');
+
         Volt::route('payroll/generate', 'payroll.generator')->name('admin.payroll.generator');
 
         Volt::route('payroll/report', 'payroll.report')->name('admin.payroll.report');

@@ -28,6 +28,11 @@
                     {{ __('Daftar Aturan Shift') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="credit-card" :href="route('admin.payroll.component')"
+                    :current="request()->routeIs('admin.payroll.component')" wire:navigate>
+                    {{ __('Daftar Master Gaji') }}
+                </flux:navlist.item>
+
                 <flux:navlist.item icon="user" :href="route('admin.user.index')"
                     :current="request()->routeIs('admin.user.index')" wire:navigate>
                     {{ __('Daftar Pengguna') }}

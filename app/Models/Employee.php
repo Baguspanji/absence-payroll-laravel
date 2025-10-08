@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Employee extends Model
@@ -30,8 +31,15 @@ class Employee extends Model
         return $this->belongsTo(Branch::class);
     }
 
-    public function schedule():HasOne
+    public function schedule(): HasOne
     {
         return $this->hasOne(Schedule::class);
+    }
+
+    public function payrollComponents(): BelongsToMany
+    {
+        return $this->belongsToMany(PayrollComponent::class, 'employee_payroll_components', 'employee_id', 'payroll_component_id')
+            ->withPivot('amount')
+            ->withTimestamps();
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Employee;
 use App\Models\Branch;
 use App\Models\Schedule;
 use App\Models\Shift;
+use App\Models\PayrollComponent;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 
@@ -33,6 +34,12 @@ new class extends Component {
 
     public $shifts = [];
 
+    public $schedule = null;
+
+    public $payrollComponents = [];
+
+    public $optionPayrollComponents = [];
+
     public function mount()
     {
         $this->branches = Branch::get()
@@ -53,6 +60,16 @@ new class extends Component {
                 ];
             })
             ->toArray();
+
+        $this->optionPayrollComponents = PayrollComponent::get()
+            ->map(function ($component) {
+                return [
+                    'value' => $component->id,
+                    'label' => $component->name . ' (' . ($component->type == 'earning' ? 'Pendapatan' : 'Potongan') . ')',
+                    'description' => $component->description,
+                ];
+            })
+            ->toArray();
     }
 
     /**
@@ -68,8 +85,79 @@ new class extends Component {
         ];
     }
 
+    // Add these properties
+    public $selectedComponent = null;
+    public $payrollAmount = 0;
+
+    // Add these methods
+    public function addPayrollComponent()
+    {
+        $this->validate([
+            'selectedComponent' => 'required',
+            'payrollAmount' => 'required|numeric|min:0',
+        ]);
+
+        $component = PayrollComponent::find($this->selectedComponent);
+
+        if (!$component) {
+            return;
+        }
+
+        // Check if employee exists and user exists
+        if (!$this->userId) {
+            return;
+        }
+
+        $user = User::find($this->userId);
+        $employee = $user->employee;
+
+        // Attach the component to employee
+        $employee->payrollComponents()->attach($component->id, [
+            'amount' => $this->payrollAmount,
+        ]);
+
+        // Refresh the payroll components
+        $this->payrollComponents = $employee->payrollComponents()->get();
+
+        // Reset form
+        $this->selectedComponent = null;
+        $this->payrollAmount = 0;
+
+        // Close modal
+        $this->dispatch('closeModal', 'add-payroll-component');
+        $this->dispatch('alert-shown', message: 'Komponen gaji berhasil ditambahkan!', type: 'success');
+        $this->modal('add-payroll-component')->close();
+    }
+
+    public function removePayrollComponent($index)
+    {
+        if (!isset($this->payrollComponents[$index])) {
+            return;
+        }
+
+        $component = $this->payrollComponents[$index];
+
+        // Check if employee exists and user exists
+        if (!$this->userId) {
+            return;
+        }
+
+        $user = User::find($this->userId);
+        $employee = $user->employee;
+
+        // Detach the component from employee
+        $employee->payrollComponents()->detach($component->id);
+
+        // Refresh the payroll components
+        $this->payrollComponents = $employee->payrollComponents()->get();
+
+        $this->dispatch('alert-shown', message: 'Komponen gaji berhasil dihapus!', type: 'success');
+    }
+
     public function detail(User $user)
     {
+        $user->load(['employee.schedule', 'employee.payrollComponents']);
+
         $this->userId = $user->id;
 
         $this->nip = $user->employee?->nip;
@@ -78,6 +166,9 @@ new class extends Component {
         $this->role = $user->role;
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
+        $this->schedule = $user->employee?->schedule;
+
+        $this->payrollComponents = $user->employee?->payrollComponents;
 
         $this->modal('detail-data')->show();
     }
@@ -129,7 +220,7 @@ new class extends Component {
             Schedule::create([
                 'employee_id' => $employee->id,
                 'shift_id' => $this->shiftId,
-                'date' => now()
+                'date' => now(),
             ]);
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil dibuat!', type: 'success');
@@ -247,15 +338,17 @@ new class extends Component {
     </div>
 
     <!-- Modal Form -->
-    <flux:modal name="form-data" class="md:w-96">
-        <div class="space-y-4">
-            <div>
+    <flux:modal name="form-data" class="md:w-4xl">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
                 <flux:heading size="lg">{{ $isEdit ? 'Edit Pengguna' : 'Tambah Pengguna' }}</flux:heading>
             </div>
 
-            <flux:input label="Nip/Pin ADMIN" placeholder="Masukkan Nip/Pin ADMIN" wire:model="nip" />
+            <div class="md:col-span-2">
+                <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />
+            </div>
 
-            <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />
+            <flux:input label="Nip/Pin ADMIN" placeholder="Masukkan Nip/Pin ADMIN" wire:model="nip" />
 
             <flux:input label="Email" placeholder="Masukkan Email" wire:model="email" />
 
@@ -271,15 +364,15 @@ new class extends Component {
                 @endforeach
             </flux:select>
 
+            <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
+
             <flux:select label="Shift" wire:model="shiftId" placeholder="Pilih Shift...">
                 @foreach ($shifts as $item)
                     <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
                 @endforeach
             </flux:select>
 
-            <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
-
-            <div class="flex">
+            <div class="flex md:col-span-2">
                 <flux:spacer />
                 <flux:button type="button" wire:click="submit" variant="primary">Simpan</flux:button>
             </div>
@@ -294,7 +387,7 @@ new class extends Component {
             </div>
 
             <div class="grid grid-cols-1 gap-4">
-                <div class="space-y-4 border-r pr-4">
+                <div class="space-y-4 pr-4">
                     <div class="mb-4">
                         <h3 class="font-semibold text-lg text-gray-800 mb-2">Informasi Karyawan</h3>
                         <div class="grid grid-cols-3 gap-2 text-sm">
@@ -328,13 +421,8 @@ new class extends Component {
                 <div class="space-y-4">
                     <div class="mb-4">
                         <h3 class="font-bold text-lg text-gray-800 mb-2">Jadwal Kerja</h3>
-                        @php
-                            $schedules = $userId
-                                ? \App\Models\Schedule::with('shift')->where('employee_id', $userId)->get()
-                                : collect([]);
-                        @endphp
 
-                        @if ($schedules->count() > 0)
+                        @if ($schedule)
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left text-gray-500">
                                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -345,13 +433,11 @@ new class extends Component {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($schedules as $schedule)
-                                            <tr class="bg-white border-b">
-                                                <td class="px-3 py-2">{{ $schedule->shift?->name }}</td>
-                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_in }}</td>
-                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_out }}</td>
-                                            </tr>
-                                        @endforeach
+                                        <tr class="bg-white border-b">
+                                            <td class="px-3 py-2">{{ $schedule->shift?->name }}</td>
+                                            <td class="px-3 py-2">{{ $schedule->shift?->clock_in }}</td>
+                                            <td class="px-3 py-2">{{ $schedule->shift?->clock_out }}</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -362,14 +448,81 @@ new class extends Component {
                         @endif
                     </div>
                 </div>
-            </div>
 
-            <div class="flex">
-                <flux:spacer />
-                <flux:button type="button" x-on:click="$flux.modal('detail-data').close()" variant="ghost">
-                    Kembali
-                </flux:button>
+                <div class="space-y-4">
+                    <div class="mb-4">
+                        <h3 class="font-bold text-lg text-gray-800 mb-2">Gaji Kerja</h3>
+
+                        @if (count($payrollComponents) > 0)
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2">Nama Gaji</th>
+                                            <th class="px-3 py-2">Tipe</th>
+                                            <th class="px-3 py-2">Jumlah</th>
+                                            <th class="px-3 py-2">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($payrollComponents as $index => $item)
+                                            <tr class="bg-white border-b">
+                                                <td class="px-3 py-2">{{ $item->name }}</td>
+                                                <td class="px-3 py-2">
+                                                    {{ $item->pivot?->type == 'earning' ? 'Pendapatan' : 'Potongan' }}
+                                                </td>
+                                                <td class="px-3 py-2">Rp
+                                                    {{ number_format($item->pivot?->amount, 0, ',', '.') }}</td>
+                                                <td class="px-3 py-2">
+                                                    <button wire:click="removePayrollComponent({{ $index }})"
+                                                        class="text-red-500 hover:text-red-700">
+                                                        <flux:icon name="trash" class="w-4 h-4 inline-block" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="py-4 text-center text-gray-500 bg-gray-50 rounded">
+                                Tidak ada komponen gaji yang ditetapkan
+                            </div>
+                        @endif
+
+                        <div class="mt-4">
+                            <button type="button" class="text-blue-600 hover:text-blue-800"
+                                x-on:click="$flux.modal('add-payroll-component').show()">
+                                <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" /> Tambah Komponen Gaji
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </flux:modal>
+
+    <!-- Modal Add Payroll Component -->
+    <flux:modal name="add-payroll-component" class="md:w-md">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Tambah Komponen Gaji</flux:heading>
+            </div>
+
+            <flux:select label="Komponen" wire:model="selectedComponent" placeholder="Pilih Komponen Gaji...">
+                @foreach ($optionPayrollComponents as $item)
+                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:input type="number" label="Jumlah" placeholder="Masukkan Jumlah" wire:model="payrollAmount" />
+
+            <div class="flex justify-end space-x-2">
+                <flux:button type="button" wire:click="$dispatch('closeModal', 'add-payroll-component')"
+                    variant="filled">Batal</flux:button>
+                <flux:button type="button" wire:click="addPayrollComponent" variant="primary">Tambah</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+</div>
 </div>
