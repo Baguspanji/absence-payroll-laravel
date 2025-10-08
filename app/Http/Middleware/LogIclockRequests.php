@@ -29,6 +29,7 @@ class LogIclockRequests
                 $logData['query'] = $request->query();
             } elseif ($request->isMethod('post')) {
                 // Log content for POST requests (like cdata)
+                $logData['query'] = $request->query();
                 $logData['content'] = $request->getContent();
             }
 

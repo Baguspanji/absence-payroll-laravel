@@ -17,6 +17,7 @@ class Device extends Model
         'branch_id',
         'cmd_id',
         'is_active',
+        'last_sync_at',
     ];
 
     /**
@@ -28,6 +29,7 @@ class Device extends Model
     {
         return [
             'is_active'         => 'boolean',
+            'last_sync_at'      => 'datetime',
         ];
     }
 

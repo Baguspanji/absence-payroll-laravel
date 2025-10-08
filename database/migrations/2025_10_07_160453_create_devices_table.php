@@ -15,9 +15,10 @@ return new class extends Migration
             $table->id();
             $table->string('name');                                  // Nama mesin yg mudah diingat, cth: "Pintu Depan Kantor A"
             $table->string('serial_number')->unique();               // Serial Number unik dari mesin
-            $table->foreignId('branch_id')->constrained('branches'); // Relasi ke cabang
+            $table->foreignId('branch_id')->nullable()->constrained('branches'); // Relasi ke cabang
             $table->string('cmd_id')->nullable(); // Relasi ke cabang
             $table->boolean('is_active')->default(false);
+            $table->timestamp('last_sync_at')->nullable();
             $table->timestamps();
         });
     }
