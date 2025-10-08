@@ -13,6 +13,7 @@ new class extends Component {
     public function approve(OvertimeRequest $overtimeRequest)
     {
         $overtimeRequest->update(['status_approval' => 'approved']);
+        $this->dispatch('alert-shown', message: 'Pengajuan berhasil disetujui!', type: 'success');
     }
 
     /**
@@ -21,6 +22,7 @@ new class extends Component {
     public function reject(OvertimeRequest $overtimeRequest)
     {
         $overtimeRequest->update(['status_approval' => 'rejected']);
+        $this->dispatch('alert-shown', message: 'Pengajuan berhasil ditolak!', type: 'success');
     }
 
     /**
@@ -37,7 +39,7 @@ new class extends Component {
     }
 }; ?>
 
-<div class="p-6">
+<div class="px-6 py-4">
     <h2 class="text-2xl font-bold mb-4">Persetujuan Lembur</h2>
 
     <div class="overflow-x-auto shadow-md sm:rounded-lg">
@@ -54,17 +56,19 @@ new class extends Component {
                 @forelse ($requests as $request)
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->employee->name }}</td>
-                        <td class="px-6 py-4">{{ \Carbon\Carbon::parse($request->date)->format('d M Y') }}</td>
+                        <td class="px-6 py-4">
+                            {{ \Carbon\Carbon::parse($request->date)->translatedFormat('d M Y') }}
+                        </td>
                         <td class="px-6 py-4">{{ $request->reason }}</td>
                         <td class="px-6 py-4 space-x-2">
                             <button wire:click="approve({{ $request->id }})"
                                 wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
-                                class="font-medium text-green-600 hover:underline">
+                                class="text-xs font-medium px-2 py-1.5 bg-green-600 text-white rounded-md cursor-pointer">
                                 Approve
                             </button>
                             <button wire:click="reject({{ $request->id }})"
                                 wire:confirm="Anda yakin ingin menolak pengajuan ini?"
-                                class="font-medium text-red-600 hover:underline">
+                                class="text-xs font-medium px-2 py-1.5 bg-red-600 text-white rounded-md cursor-pointer">
                                 Reject
                             </button>
                         </td>

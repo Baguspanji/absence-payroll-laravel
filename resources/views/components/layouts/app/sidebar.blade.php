@@ -46,6 +46,9 @@
                     :current="request()->routeIs('overtime.create')" wire:navigate>{{ __('Pengajuan Lembur') }}
                 </flux:navlist.item>
 
+                <!-- separator -->
+                <flux:separator />
+
                 <flux:navlist.item icon="circle-dollar-sign" :href="route('admin.payroll.generator')"
                     :current="request()->routeIs('admin.payroll.generator')" wire:navigate>
                     {{ __('Penggajian') }}

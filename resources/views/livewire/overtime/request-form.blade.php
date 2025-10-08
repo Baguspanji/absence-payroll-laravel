@@ -47,7 +47,7 @@ new class extends Component {
             'status' => 'pending',
         ]);
 
-        session()->flash('message', 'Pengajuan lembur berhasil dikirim.');
+        $this->dispatch('alert-shown', message: 'Pengajuan berhasil dikirim!', type: 'success');
 
         $this->reset('date', 'reason');
         // Jangan reset employeeId jika yang login adalah karyawan biasa
@@ -62,57 +62,25 @@ new class extends Component {
         <div class="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-md">
             <h2 class="text-2xl font-bold mb-6">Form Pengajuan Lembur</h2>
 
-            <form wire:submit="submit" class="space-y-6">
-                @if (session('message'))
-                    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-md" role="alert">
-                        <span>{{ session('message') }}</span>
-                    </div>
-                @endif
-
+            <form wire:submit="submit" class="space-y-4">
                 {{-- Dropdown Karyawan (hanya untuk Admin/Manajer) --}}
                 @if (Auth::user()->role !== 'employee') {{-- Sesuaikan dengan logic role Anda --}}
-                    <div>
-                        <label for="employeeId" class="block text-sm font-medium text-gray-700">Pilih Karyawan</label>
-                        <select wire:model="employeeId" id="employeeId"
-                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            <option value="">-- Pilih Karyawan --</option>
-                            @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('employeeId')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    <flux:select label="Karyawan" wire:model="employeeId" placeholder="Pilih Karyawan...">
+                        @foreach ($employees as $employee)
+                            <flux:select.option value="{{ $employee->id }}">{{ $employee->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
                 @endif
 
                 {{-- Tanggal Lembur --}}
-                <div>
-                    <label for="date" class="block text-sm font-medium text-gray-700">Tanggal Lembur</label>
-                    <input type="date" wire:model="date" id="date"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                    @error('date')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                <flux:input type="date" label="Tanggal Lembur" wire:model="date" />
 
                 {{-- Alasan --}}
-                <div>
-                    <label for="reason" class="block text-sm font-medium text-gray-700">Alasan Lembur</label>
-                    <textarea wire:model="reason" id="reason" rows="3"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
-                    @error('reason')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
+                <flux:textarea label="Alasan Lembur" wire:model="reason" rows="3" />
 
-                <div>
-                    <button type="submit"
-                        class="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        Ajukan Lembur
-                    </button>
+                <div class="flex justify-end">
+                    <flux:button type="submit" variant="primary">Ajukan Lembur</flux:button>
                 </div>
-            </form>
+            </form>˝
         </div>
     </div>
-</div>

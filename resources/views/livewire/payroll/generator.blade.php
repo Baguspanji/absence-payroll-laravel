@@ -17,7 +17,7 @@ new class extends Component {
     public function mount()
     {
         $this->years = range(Carbon::now()->year, Carbon::now()->year - 5);
-        $this->months = collect(range(1, 12))->mapWithKeys(fn($month) => [$month => Carbon::create()->month($month)->format('F')])->toArray();
+        $this->months = collect(range(1, 12))->mapWithKeys(fn($month) => [$month => Carbon::create()->month($month)->translatedFormat('F')])->toArray();
         $this->selectedYear = Carbon::now()->year;
         $this->selectedMonth = Carbon::now()->month;
     }
@@ -30,10 +30,7 @@ new class extends Component {
         $endDate = $startDate->copy()->endOfMonth();
         $totalDaysInMonth = $startDate->daysInMonth;
 
-        $employees = Employee::query()
-            ->join('users', 'employees.user_id', '=', 'users.id')
-            ->where('users.is_active', true)->select('employees.*')
-            ->get();
+        $employees = Employee::query()->join('users', 'employees.user_id', '=', 'users.id')->where('users.is_active', true)->select('employees.*')->get();
         $this->results = [];
 
         DB::transaction(function () use ($employees, $startDate, $endDate, $totalDaysInMonth) {
@@ -53,11 +50,7 @@ new class extends Component {
                     ->sum('overtime_hours');
 
                 // 2. Ambil semua komponen gaji milik karyawan ini
-                $components = DB::table('employee_payroll_components as epc')
-                    ->join('payroll_components as pc', 'epc.payroll_component_id', '=', 'pc.id')
-                    ->where('epc.employee_id', $employee->id)
-                    ->select('pc.name', 'pc.type', 'pc.is_fixed', 'epc.amount')
-                    ->get();
+                $components = DB::table('employee_payroll_components as epc')->join('payroll_components as pc', 'epc.payroll_component_id', '=', 'pc.id')->where('epc.employee_id', $employee->id)->select('pc.name', 'pc.type', 'pc.is_fixed', 'epc.amount')->get();
 
                 $earnings = [];
                 $deductions = [];
@@ -113,38 +106,30 @@ new class extends Component {
         });
 
         $this->isGenerated = true;
-        $this->dispatch('payroll-generated', message: 'Payroll berhasil digenerate!');
+        $this->dispatch('payroll-generated', message: 'Penggajian berhasil digenerate!');
+
+        $this->dispatch('alert-shown', message: 'Penggajian berhasil digenerate!', type: 'success');
     }
 }; ?>
 
-<div class="p-6">
-    <h2 class="text-2xl font-bold mb-6">Generate Payroll Bulanan</h2>
+<div class="px-6 py-4">
+    <h2 class="text-2xl font-bold mb-6">Generate Gaji Bulanan</h2>
 
     <div class="bg-white p-6 rounded-lg shadow-md mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label for="month" class="block text-sm font-medium text-gray-700">Bulan</label>
-                <select wire:model="selectedMonth" id="month"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    @foreach ($months as $num => $name)
-                        <option value="{{ $num }}">{{ $name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
-                <label for="year" class="block text-sm font-medium text-gray-700">Tahun</label>
-                <select wire:model="selectedYear" id="year"
-                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    @foreach ($years as $year)
-                        <option value="{{ $year }}">{{ $year }}</option>
-                    @endforeach
-                </select>
-            </div>
+            <flux:select label="Bulan" wire:model="selectedMonth" placeholder="Pilih Bulan...">
+                @foreach ($months as $num => $name)
+                    <flux:select.option value="{{ $num }}">{{ $name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+            <flux:select label="Tahun" wire:model="selectedYear" placeholder="Pilih Tahun...">
+                @foreach ($years as $year)
+                    <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
+                @endforeach
+            </flux:select>
+
             <div class="self-end">
-                <button wire:click="generatePayroll"
-                    class="w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
-                    Generate Payroll
-                </button>
+                <flux:button type="submit" wire:click="generatePayroll" variant="primary">Generate Payroll</flux:button>
             </div>
         </div>
     </div>
