@@ -15,7 +15,21 @@ class Device extends Model
         'name',
         'serial_number',
         'branch_id',
+        'cmd_id',
+        'is_active',
     ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active'         => 'boolean',
+        ];
+    }
 
     public function branch(): BelongsTo
     {

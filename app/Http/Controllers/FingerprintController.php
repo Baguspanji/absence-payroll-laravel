@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Models\Device;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,13 +14,31 @@ class FingerprintController extends Controller
      */
     public function getRequest(Request $request)
     {
-        // Log bahwa mesin berhasil check-in
-        // Log::info('Device check-in:', $request->query());
+        $serialNumber = $request->query('SN');
 
-        // Perintah untuk mesin: "Kirimkan data absensi (ATTLog) yang baru"
-        // C:1: adalah ID perintah, ini bisa random.
-        // $response = "C:1:DATA QUERY ATTLog startDate=" . now()->subDay()->format('Y-m-d') . "\tendDate=" . now()->format('Y-m-d');
-        $response = "OK";
+        $device = Device::where([
+            'serial_number' => $serialNumber,
+            'is_active'     => true,
+        ])->first();
+
+        try {
+            $response = null;
+
+            if ($device) {
+                DB::beginTransaction();
+                $response = "OK";
+
+                $command = cache()->get("device_command_{$serialNumber}");
+
+                if ($command) {
+                    $response = $command;
+                }
+                DB::commit();
+            }
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            Log::error($th->getMessage());
+        }
 
         return $this->getResponse($response);
     }
@@ -47,8 +66,8 @@ class FingerprintController extends Controller
             $data = explode("\t", $line);
 
             if (count($data) >= 4) {
-                $nip = $data[0];
-                $timestamp = $data[1];
+                $nip         = $data[0];
+                $timestamp   = $data[1];
                 $status_scan = $data[3];
 
                 DB::table('attendances')->insert([
