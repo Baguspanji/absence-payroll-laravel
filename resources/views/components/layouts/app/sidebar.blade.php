@@ -28,6 +28,11 @@
                     {{ __('Daftar Pengguna') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="fingerprint" :href="route('admin.device.index')"
+                    :current="request()->routeIs('admin.device.index')" wire:navigate>
+                    {{ __('Daftar Device') }}
+                </flux:navlist.item>
+
                 <!-- separator -->
                 <flux:separator />
 

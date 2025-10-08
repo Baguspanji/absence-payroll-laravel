@@ -44,6 +44,8 @@ Route::middleware(['auth'])->group(function () {
         Volt::route('pengguna', 'user.list')->name('admin.user.index');
 
         Volt::route('cabang', 'branch.list')->name('admin.branch.index');
+
+        Volt::route('device', 'device.list')->name('admin.device.index');
     });
 
     Route::get('/payroll/{payroll}/slip', [PayrollController::class, 'showSlip'])->name('payroll.slip');

@@ -1,8 +1,8 @@
 <?php
 
 use Livewire\Volt\Component;
+use App\Models\Device;
 use App\Models\Branch;
-use App\Models\Employee;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 
@@ -10,13 +10,26 @@ new class extends Component {
     use WithPagination;
 
     public $isEdit = false;
-    public $branchId = null;
+    public $deviceId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
     public $name = '';
     #[Rule('required', message: 'Nama harus diisi.')]
-    public $address = '';
-    public $lat = '';
-    public $long = '';
+    public $serialNumber = '';
+    public $branchId = '';
+    public $branches = [];
+
+    public function mount()
+    {
+        $this->branches = Branch::get()
+            ->map(function ($branch) {
+                return [
+                    'value' => $branch->id,
+                    'label' => $branch->name,
+                    'description' => $branch->address,
+                ];
+            })
+            ->toArray();
+    }
 
     /**
      * Mengambil data pengajuan untuk ditampilkan.
@@ -24,22 +37,18 @@ new class extends Component {
     public function with(): array
     {
         return [
-            'requests' => Branch::query()->latest()->paginate(10),
+            'requests' => Device::query()->latest()->paginate(10),
         ];
     }
 
-    public function edit(Branch $branch)
+    public function edit(Device $device)
     {
-        $this->branchId = $branch->id;
+        $this->branchId = $device->id;
         $this->isEdit = true;
 
-        $this->name = $branch->name;
-        $this->address = $branch->address;
-        $latlong = explode(',', $branch->latlong);
-        if (count(explode(',', $branch->latlong)) == 2) {
-            $this->lat = $latlong[0];
-            $this->long = $latlong[1];
-        }
+        $this->name = $device->name;
+        $this->serialNumber = $device->serial_number;
+        $this->branchId = $device->branchId;
 
         $this->modal('form-data')->show();
     }
@@ -48,56 +57,40 @@ new class extends Component {
     {
         $this->validate();
 
-        if (!$this->isEdit) {
-            $device = Branch::create([
-                'name' => $this->name,
-                'address' => $this->address,
-                'latlong' => str_replace(',', '.', $this->lat) . ',' . str_replace(',', '.', $this->long),
-            ]);
+        $user = Device::find($this->deviceId);
+        $user->name = $this->name;
+        // $user->serialNumber = $this->serialNumber;
+        $user->branchId = $this->branchId;
+        $user->save();
 
-            $this->dispatch('alert-shown', message: 'Data cabang berhasil dibuat!', type: 'success');
-        } else {
-            $device = Branch::find($this->branchId);
-            $device->name = $this->name;
-            $device->address = $this->address;
-            $device->latlong = str_replace(',', '.', $this->lat) . ',' . str_replace(',', '.', $this->long);
-            $device->save();
-
-            $this->dispatch('alert-shown', message: 'Data cabang berhasil diperbarui!', type: 'success');
-        }
+        $this->dispatch('alert-shown', message: 'Data device berhasil diperbarui!', type: 'success');
 
         $this->modal('form-data')->close();
     }
 
     public function resetForm()
     {
-        $this->branchId = null;
+        $this->deviceId = null;
         $this->isEdit = false;
 
         $this->name = '';
-        $this->address = '';
-        $this->lat = '';
-        $this->long = '';
+        $this->serialNumber = '';
+        $this->branchId = '';
     }
 }; ?>
 
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-2xl font-bold mb-4">Daftar Cabang</h2>
-        <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
-            x-on:click="$flux.modal('form-data').show(); $wire.resetForm();">
-            <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
-            Tambah Cabang
-        </button>
+        <h2 class="text-2xl font-bold mb-4">Daftar Device</h2>
     </div>
 
     <div class="overflow-x-auto shadow-md sm:rounded-lg">
         <table class="w-full text-sm text-left text-gray-500">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3">Nama Cabang</th>
-                    <th scope="col" class="px-6 py-3">Alamat</th>
-                    <th scope="col" class="px-6 py-3">Latlong</th>
+                    <th scope="col" class="px-6 py-3">Nama Device</th>
+                    <th scope="col" class="px-6 py-3">Serial Number</th>
+                    <th scope="col" class="px-6 py-3">Cabang</th>
                     <th scope="col" class="px-6 py-3">Aksi</th>
                 </tr>
             </thead>
@@ -105,8 +98,8 @@ new class extends Component {
                 @forelse ($requests as $request)
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
-                        <td class="px-6 py-4">{{ $request->address }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->latlong ?? '-' }}</td>
+                        <td class="font-mono px-6 py-4">{{ $request->serial_number }}</td>
+                        <td class="px-6 py-4">{{ $request->branch?->name }}</td>
                         <td class="px-6 py-4 space-x-2">
                             <button wire:click="edit({{ $request->id }})"
                                 class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
@@ -118,7 +111,7 @@ new class extends Component {
                 @empty
                     <tr class="bg-white border-b">
                         <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data cabang.
+                            Tidak ada data device.
                         </td>
                     </tr>
                 @endforelse
@@ -139,12 +132,14 @@ new class extends Component {
 
             <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />
 
-            <flux:input label="Alamat" placeholder="Masukkan Alamat" wire:model="address" />
+            <flux:input label="Serial Number" placeholder="Masukkan Serial Number" wire:model="serialNumber" readonly />
 
-            <div class="flex items-center gap-2">
-                <flux:input label="Latitude" placeholder="Masukkan Latitude" wire:model="lat" />
-                <flux:input label="Longitude" placeholder="Masukkan Longitude" wire:model="long" />
-            </div>
+
+            <flux:select label="Cabang" wire:model="branchId" placeholder="Pilih Cabang...">
+                @foreach ($branches as $item)
+                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
             <div class="flex">
                 <flux:spacer />
