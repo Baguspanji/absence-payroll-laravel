@@ -3,6 +3,7 @@
 use Livewire\Volt\Component;
 use App\Models\OvertimeRequest;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth;
 
 new class extends Component {
     use WithPagination;
@@ -30,9 +31,21 @@ new class extends Component {
      */
     public function with(): array
     {
+        if (Auth::user()->role == 'leader') {
+            return [
+                'requests' => OvertimeRequest::where('status_approval', 'pending')
+                    ->with('employee')
+                    ->whereHas('employee', function ($q) {
+                        $q->where('branch_id', Auth::user()->employee->branch_id);
+                    })
+                    ->latest()
+                    ->paginate(10),
+            ];
+        }
+
         return [
             'requests' => OvertimeRequest::where('status_approval', 'pending')
-                ->with('employee') // Eager load relasi employee
+                ->with('employee.branch') // Eager load relasi employee
                 ->latest()
                 ->paginate(10),
         ];
@@ -46,7 +59,11 @@ new class extends Component {
         <table class="w-full text-sm text-left text-gray-500">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
+                    <th scope="col" class="px-6 py-3">#</th>
                     <th scope="col" class="px-6 py-3">Nama Karyawan</th>
+                    @can('admin')
+                        <th scope="col" class="px-6 py-3">Cabang</th>
+                    @endcan
                     <th scope="col" class="px-6 py-3">Tanggal Lembur</th>
                     <th scope="col" class="px-6 py-3">Alasan</th>
                     <th scope="col" class="px-6 py-3">Aksi</th>
@@ -55,7 +72,11 @@ new class extends Component {
             <tbody>
                 @forelse ($requests as $request)
                     <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="font-mono px-6 py-4">{{ $request->employee?->nip }}</td>
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->employee->name }}</td>
+                        @can('admin')
+                            <td class="font-mono px-6 py-4">{{ $request->employee?->branch?->name }}</td>
+                        @endcan
                         <td class="px-6 py-4">
                             {{ \Carbon\Carbon::parse($request->date)->translatedFormat('d M Y') }}
                         </td>

@@ -33,10 +33,6 @@ Route::middleware(['auth'])->group(function () {
         ->name('two-factor.show');
 
     Route::middleware(['is_admin'])->prefix('admin')->group(function () {
-        Volt::route('persetujuan-cuti', 'leaves.approval')->name('admin.leaves.approval');
-
-        Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
-
         Volt::route('payroll/component', 'payroll.component')->name('admin.payroll.component');
 
         Volt::route('payroll/generate', 'payroll.generator')->name('admin.payroll.generator');
@@ -52,13 +48,19 @@ Route::middleware(['auth'])->group(function () {
         Volt::route('device', 'device.list')->name('admin.device.index');
     });
 
+    Route::middleware(['is_leader'])->prefix('admin')->group(function () {
+        Volt::route('persetujuan-cuti', 'leaves.approval')->name('admin.leaves.approval');
+
+        Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
+
+        Volt::route('history-absensi', 'attedance.history')->name('admin.attedance.history');
+    });
+
     Route::get('/payroll/{payroll}/slip', [PayrollController::class, 'showSlip'])->name('payroll.slip');
 
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');
 
     Volt::route('ajukan-lembur', 'overtime.request-form')->name('overtime.create');
-
-    Volt::route('history-absensi', 'attedance.history')->name('attedance.history');
 });
 
 // Group all iclock routes under the log.iclock middleware

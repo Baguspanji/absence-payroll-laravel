@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'log.iclock' => \App\Http\Middleware\LogIclockRequests::class,
             'is_admin' => \App\Http\Middleware\IsAdmin::class,
+            'is_leader' => \App\Http\Middleware\IsLeader::class,
         ]);
         $middleware->validateCsrfTokens(except: [
             '/iclock/cdata',

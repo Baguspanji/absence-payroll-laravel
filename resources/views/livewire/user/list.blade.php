@@ -295,7 +295,17 @@ new class extends Component {
                         <td class="px-6 py-4">{{ $request->email }}</td>
                         <td class="px-6 py-4">{{ $request->employee?->branch?->name }}</td>
                         <td class="px-6 py-4">{{ $request->employee?->position }}</td>
-                        <td class="px-6 py-4 font-semibold">{{ strToUpper($request->role) }}</td>
+                        <td class="px-6 py-4 text-xs font-bold">
+                            @if ($request->role == 'admin')
+                                ADMIN
+                            @elseif ($request->role == 'leader')
+                                KEPALA TOKO
+                            @elseif ($request->role == 'employee')
+                                KARYAWAN
+                            @else
+                                -
+                            @endif
+                        </td>
                         <td class="px-6 py-4">
                             @if ($request->is_active)
                                 <span class="text-xs text-white px-2 py-1.5 bg-green-600 rounded-md cursor-pointer"
@@ -401,8 +411,18 @@ new class extends Component {
                             <div class="col-span-2">{{ $email }}</div>
 
                             <div>Akses</div>
-                            <div class="col-span-2"><span
-                                    class="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-800">{{ strToUpper($role) }}</span>
+                            <div class="col-span-2">
+                                <span class="text-xs font-bold px-2 py-1 rounded-md bg-blue-100 text-blue-800">
+                                    @if ($role == 'admin')
+                                        ADMIN
+                                    @elseif ($role == 'leader')
+                                        KEPALA TOKO
+                                    @elseif ($role == 'employee')
+                                        KARYAWAN
+                                    @else
+                                        -
+                                    @endif
+                                </span>
                             </div>
 
                             <div>Cabang</div>
