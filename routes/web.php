@@ -45,6 +45,8 @@ Route::middleware(['auth'])->group(function () {
 
         Volt::route('cabang', 'branch.list')->name('admin.branch.index');
 
+        Volt::route('shift', 'shift.list')->name('admin.shift.index');
+
         Volt::route('device', 'device.list')->name('admin.device.index');
     });
 
