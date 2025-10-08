@@ -18,6 +18,19 @@
                 <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')"
                     wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
 
+                <flux:navlist.item icon="map-pin" :href="route('admin.branch.index')"
+                    :current="request()->routeIs('admin.branch.index')" wire:navigate>
+                    {{ __('Daftar Cabang') }}
+                </flux:navlist.item>
+
+                <flux:navlist.item icon="user" :href="route('admin.user.index')"
+                    :current="request()->routeIs('admin.user.index')" wire:navigate>
+                    {{ __('Daftar Pengguna') }}
+                </flux:navlist.item>
+
+                <!-- separator -->
+                <flux:separator />
+
                 <flux:navlist.item icon="document-check" :href="route('admin.leaves.approval')"
                     :current="request()->routeIs('admin.leaves.approval')" wire:navigate>{{ __('Persetujuan Cuti') }}
                 </flux:navlist.item>
@@ -41,11 +54,6 @@
                 <flux:navlist.item icon="file-text" :href="route('admin.payroll.report')"
                     :current="request()->routeIs('admin.payroll.report')" wire:navigate>
                     {{ __('Laporan Rekap Gaji') }}
-                </flux:navlist.item>
-
-                <flux:navlist.item icon="user" :href="route('admin.user.index')"
-                    :current="request()->routeIs('admin.user.index')" wire:navigate>
-                    {{ __('Daftar Pengguna') }}
                 </flux:navlist.item>
 
             </flux:navlist.group>

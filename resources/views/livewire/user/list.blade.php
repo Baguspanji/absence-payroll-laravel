@@ -3,6 +3,7 @@
 use Livewire\Volt\Component;
 use App\Models\User;
 use App\Models\Employee;
+use App\Models\Branch;
 use Livewire\WithPagination;
 use Livewire\Attributes\Rule;
 
@@ -19,7 +20,25 @@ new class extends Component {
     public $email = '';
     #[Rule('required', message: 'Akses harus dipilih.')]
     public $role = '';
+    #[Rule('required', message: 'Cabang harus dipilih.')]
+    public $branchId = '';
+
     public $position = '';
+
+    public $branches = [];
+
+    public function mount()
+    {
+        $this->branches = Branch::get()
+            ->map(function ($branch) {
+                return [
+                    'value' => $branch->id,
+                    'label' => $branch->name,
+                    'description' => $branch->address,
+                ];
+            })
+            ->toArray();
+    }
 
     /**
      * Mengambil data pengajuan untuk ditampilkan.
@@ -44,6 +63,7 @@ new class extends Component {
         $this->email = $user->email;
         $this->role = $user->role;
         $this->position = $user->employee?->position;
+        $this->branchId = $user->employee?->branch_id;
 
         $this->modal('form-data')->show();
     }
@@ -70,7 +90,7 @@ new class extends Component {
 
             Employee::create([
                 'user_id' => $user->id,
-                'branch_id' => 1,
+                'branch_id' => $this->branchId,
                 'nip' => $this->nip,
                 'name' => $this->name,
                 'position' => $this->position,
@@ -85,6 +105,7 @@ new class extends Component {
             $user->save();
 
             $employee = Employee::find($user->employee?->id);
+            $employee->branch_id = $this->branchId;
             $employee->nip = $this->nip;
             $employee->name = $this->name;
             $employee->position = $this->position;
@@ -105,6 +126,7 @@ new class extends Component {
         $this->name = '';
         $this->email = '';
         $this->role = '';
+        $this->branchId = '';
         $this->position = '';
     }
 }; ?>
@@ -195,6 +217,12 @@ new class extends Component {
                 <flux:select.option value="admin">ADMIN</flux:select.option>
                 <flux:select.option value="leader">KEPALA TOKO</flux:select.option>
                 <flux:select.option value="employee">KARYAWAN</flux:select.option>
+            </flux:select>
+
+            <flux:select label="Cabang" wire:model="branchId" placeholder="Pilih Cabang...">
+                @foreach ($branches as $item)
+                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
+                @endforeach
             </flux:select>
 
             <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
