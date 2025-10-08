@@ -43,6 +43,11 @@
                     {{ __('Laporan Rekap Gaji') }}
                 </flux:navlist.item>
 
+                <flux:navlist.item icon="user" :href="route('admin.user.index')"
+                    :current="request()->routeIs('admin.user.index')" wire:navigate>
+                    {{ __('Daftar Pengguna') }}
+                </flux:navlist.item>
+
             </flux:navlist.group>
         </flux:navlist>
 
