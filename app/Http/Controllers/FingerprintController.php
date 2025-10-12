@@ -51,7 +51,7 @@ class FingerprintController extends Controller
                     $response .= "TransFlag=1111000000\n";
                     $response .= "TimeZone=7\n";
                     $response .= "Realtime=1\n";
-                    $response .= "Encrypt=None\n";
+                    $response .= "Encrypt=0\n";
                 }
             }
 

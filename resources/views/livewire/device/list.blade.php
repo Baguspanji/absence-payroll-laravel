@@ -106,8 +106,13 @@ new class extends Component {
             $command = str_replace('[EndTime]', $endTimeFormatted, $command);
         }
 
-        $command = str_replace('<spasi>', ' ', $command);
-        $command = str_replace('<tab>', "\t", $command);
+        if (str_contains($command, '<tab>')) {
+            $command = str_replace('<tab>', "\t", $command);
+        }
+
+        if (str_contains($command, '<spasi>')) {
+            $command = str_replace('<spasi>', ' ', $command);
+        }
 
         cache()->put("device_command_{$this->serialNumber}", $command, now()->addMinutes(30)); // Cache for 30 minutes
         // cache()->put("device_command_{$this->serialNumber}", "C:1:DATA QUERY tablename=user,fielddesc=*,filter=*", now()->addMinutes(10)); // Cache for 10 minutes
