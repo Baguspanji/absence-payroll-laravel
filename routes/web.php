@@ -54,6 +54,8 @@ Route::middleware(['auth'])->group(function () {
         Volt::route('persetujuan-lembur', 'overtime.approval')->name('admin.overtime.approval');
 
         Volt::route('history-absensi', 'attedance.history')->name('admin.attedance.history');
+
+        Volt::route('rekap-absensi', 'attedance.summary')->name('admin.attedance.summary');
     });
 
     Route::get('/payroll/{payroll}/slip', [PayrollController::class, 'showSlip'])->name('payroll.slip');

@@ -9,8 +9,16 @@
     <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
         <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
-        <a href="{{ route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
-            <x-app-logo />
+        <a href="{{ route('dashboard') }}" class="me-5 flex items-start space-x-2 rtl:space-x-reverse" wire:navigate>
+            <svg class="h-9 w-9 text-black mt-0.5" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="36" height="36" rx="4" stroke="currentColor" stroke-width="3" fill="none"/>
+                <path d="M20 10C22.2 10 24 11.8 24 14C24 16.2 22.2 18 20 18C17.8 18 16 16.2 16 14C16 11.8 17.8 10 20 10Z" fill="currentColor"/>
+                <path d="M20 20C16 20 12 22 12 26V30H28V26C28 22 24 20 20 20Z" fill="currentColor"/>
+                <path d="M20 6V8M20 32V34M28 20H30M10 20H12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <h2 class="text-xl font-semibold leading-[1]">
+                Absensi &<br> Penggajian
+            </h2>
         </a>
 
         <flux:navlist variant="outline">
@@ -52,6 +60,10 @@
                 @canany(['admin', 'leader'])
                     <flux:navlist.item icon="notebook-text" :href="route('admin.attedance.history')"
                         :current="request()->routeIs('admin.attedance.history')" wire:navigate>{{ __('Riwayat Absensi') }}
+                    </flux:navlist.item>
+
+                    <flux:navlist.item icon="clipboard-check" :href="route('admin.attedance.summary')"
+                        :current="request()->routeIs('admin.attedance.summary')" wire:navigate>{{ __('Rekap Absensi') }}
                     </flux:navlist.item>
 
                     <flux:navlist.item icon="document-check" :href="route('admin.leaves.approval')"

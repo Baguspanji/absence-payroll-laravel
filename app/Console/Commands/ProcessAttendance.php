@@ -45,56 +45,116 @@ class ProcessAttendance extends Command
                 $schedule = DB::table('schedules')
                     ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
                     ->where('employee_id', $employee->id)
-                    ->where('date', $date)
+                    // ->where('date', $date)
                     ->select('shifts.clock_in', 'shifts.clock_out')
                     ->first();
 
                 if (! $schedule) {
-                    $this->warn("Jadwal shift untuk karyawan NIP {$nip} pada tanggal {$date} tidak ditemukan. Melewatkan...");
+                    $this->warn("Jadwal shift untuk karyawan NIP {$nip} tidak ditemukan. Melewatkan...");
                     continue;
                 }
 
-                                                                                         // LOGIKA BARU: Cari jam masuk dan pulang berdasarkan status_scan
-                $clockInRecord  = $dailyAttendances->where('status_scan', '0')->first(); // Scan masuk pertama
-                $clockOutRecord = $dailyAttendances->where('status_scan', '1')->last();  // Scan pulang terakhir
+                // Ambil semua record absensi hari ini dan sortir berdasarkan waktu
+                $sortedAttendances = $dailyAttendances->sortBy('timestamp');
 
-                $lateMinutes   = 0;
-                $overtimeHours = 0;
+                // Ambil waktu jadwal sebagai Carbon objects
+                $shiftStart = Carbon::parse($date . ' ' . $schedule->clock_in);
+                $shiftEnd   = Carbon::parse($date . ' ' . $schedule->clock_out);
 
-                // --- LOGIKA KALKULASI KETERLAMBATAN ---
-                if ($clockInRecord) {
-                    $clockInTime    = Carbon::parse($clockInRecord->timestamp);
-                    $shiftStartTime = Carbon::parse($date . ' ' . $schedule->clock_in);
+                // Waktu tengah shift untuk membantu penentuan clock_in/clock_out
+                $midShift = $shiftStart->copy()->addSeconds($shiftEnd->diffInSeconds($shiftStart) / 2);
 
-                    // Toleransi 15 menit
-                    if ($clockInTime->isAfter($shiftStartTime->addMinutes(15))) {
-                        $lateMinutes = $clockInTime->diffInMinutes($shiftStartTime->subMinutes(15));
+                // Inisialisasi
+                $clockInRecord  = null;
+                $clockOutRecord = null;
+
+                // Cari clock in (scan paling dekat dengan jam masuk)
+                $minDiffForClockIn = PHP_INT_MAX;
+                foreach ($sortedAttendances as $attendance) {
+                    $attendanceTime = Carbon::parse($attendance->timestamp);
+
+                    // Hanya proses absensi sebelum tengah shift sebagai kandidat clock in
+                    if ($attendanceTime->lt($midShift)) {
+                        $diffWithShiftStart = abs($attendanceTime->diffInSeconds($shiftStart));
+                        if ($diffWithShiftStart < $minDiffForClockIn) {
+                            $minDiffForClockIn = $diffWithShiftStart;
+                            $clockInRecord     = $attendance;
+                        }
                     }
                 }
 
-                // --- LOGIKA KALKULASI LEMBUR (VERSI SEDERHANA) ---
+                // Cari clock out (scan paling dekat dengan jam pulang)
+                $minDiffForClockOut = PHP_INT_MAX;
+                foreach ($sortedAttendances as $attendance) {
+                    $attendanceTime = Carbon::parse($attendance->timestamp);
 
-                // 1. Cek apakah ada izin lembur yang sudah disetujui untuk hari ini
+                    // Hanya proses absensi setelah tengah shift sebagai kandidat clock out
+                    if ($attendanceTime->gt($midShift)) {
+                        $diffWithShiftEnd = abs($attendanceTime->diffInSeconds($shiftEnd));
+                        if ($diffWithShiftEnd < $minDiffForClockOut) {
+                            $minDiffForClockOut = $diffWithShiftEnd;
+                            $clockOutRecord     = $attendance;
+                        }
+                    }
+                }
+
+                // Jika tidak ada record di salah satu bagian shift (pagi/sore)
+                // Coba gunakan logika alternatif - scan paling awal sebagai clock in dan paling akhir sebagai clock out
+                if (! $clockInRecord && $sortedAttendances->count() > 0) {
+                    $clockInRecord = $sortedAttendances->first();
+                }
+
+                if (! $clockOutRecord && $sortedAttendances->count() > 0) {
+                    $clockOutRecord = $sortedAttendances->last();
+
+                    // Jika masih sama dengan clock in, set menjadi null untuk menghindari duplikasi
+                    if ($clockOutRecord && $clockInRecord && $clockOutRecord->id === $clockInRecord->id) {
+                        $clockOutRecord = null;
+                    }
+                }
+
+                $workHours = 0;
+                $lateMinutes   = 0;
+                $overtimeHours = 0;
+
+                // --- LOGIKA KALKULASI JAM KERJA ---
+                if ($clockInRecord && $clockOutRecord) {
+                    $clockInTime = Carbon::parse($clockInRecord->timestamp);
+                    $clockOutTime = Carbon::parse($clockOutRecord->timestamp);
+
+                    // Only count if clock out is after clock in
+                    if ($clockOutTime->gt($clockInTime)) {
+                        $workHours = round(abs($clockOutTime->diffInMinutes($clockInTime)) / 60, 2);
+                    } else {
+                        // If clock out appears to be before clock in (e.g., next day clock out),
+                        // assume 24-hour format and calculate accordingly
+                        $adjustedClockOutTime = $clockOutTime->copy()->addDay();
+                        $workHours = round(abs($adjustedClockOutTime->diffInMinutes($clockInTime)) / 60, 2);
+                    }
+                }
+
+                // --- LOGIKA KALKULASI KETERLAMBATAN ---
+                if ($clockInRecord) {
+                    $clockInTime = Carbon::parse($clockInRecord->timestamp);
+
+                    // Toleransi 15 menit
+                    if ($clockInTime->isAfter($shiftStart->copy()->addMinutes(15))) {
+                        $lateMinutes = round(abs($clockInTime->diffInMinutes($shiftStart)));
+                    }
+                }
+
+                // --- LOGIKA KALKULASI LEMBUR ---
                 $isOvertimeApproved = DB::table('overtime_requests')
                     ->where('employee_id', $employee->id)
                     ->where('date', $date)
                     ->where('status', 'approved')
                     ->exists();
 
-                // 2. Jika disetujui, baru jalankan kalkulasi
                 if ($isOvertimeApproved && $clockOutRecord) {
-                    $schedule = DB::table('schedules')
-                        ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
-                        ->where('employee_id', $employee->id)->where('date', $date)
-                        ->select('shifts.jam_pulang')->first();
+                    $clockOutTime = Carbon::parse($clockOutRecord->timestamp);
 
-                    if ($schedule) {
-                        $clockOutTime = Carbon::parse($clockOutRecord->timestamp);
-                        $shiftEndTime = Carbon::parse($date . ' ' . $schedule->jam_pulang);
-
-                        if ($clockOutTime->isAfter($shiftEndTime)) {
-                            $overtimeHours = round($clockOutTime->diffInMinutes($shiftEndTime) / 60, 2);
-                        }
+                    if ($clockOutTime->isAfter($shiftEnd)) {
+                        $overtimeHours = round(abs($clockOutTime->diffInMinutes($shiftEnd)) / 60, 2);
                     }
                 }
 
@@ -108,6 +168,7 @@ class ProcessAttendance extends Command
                         'branch_id'      => $employee->branch_id,
                         'clock_in'       => $clockInRecord ? Carbon::parse($clockInRecord->timestamp)->toTimeString() : null,
                         'clock_out'      => $clockOutRecord ? Carbon::parse($clockOutRecord->timestamp)->toTimeString() : null,
+                        'work_hours'     => min($workHours, 8), // Maksimal 8 jam kerja normal
                         'late_minutes'   => $lateMinutes,
                         'overtime_hours' => $overtimeHours,
                         'created_at'     => now(),

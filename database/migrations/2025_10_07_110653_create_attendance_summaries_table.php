@@ -18,6 +18,7 @@ return new class extends Migration
             $table->timestamp('date');
             $table->string('clock_in');
             $table->string('clock_out');
+            $table->decimal('work_hours', 8, 2)->default(0.00);
             $table->integer('late_minutes')->default(0);
             $table->decimal('overtime_hours', 8, 2)->default(0.00);
             $table->timestamps();

@@ -17,6 +17,7 @@ class AttendanceSummary extends Model
         'date',
         'clock_in',
         'clock_out',
+        'work_hours',
         'late_minutes',
         'overtime_hours',
     ];

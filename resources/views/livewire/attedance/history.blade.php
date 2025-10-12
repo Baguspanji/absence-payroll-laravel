@@ -46,7 +46,7 @@ new class extends Component {
                         <th scope="col" class="px-6 py-3">Cabang</th>
                     @endcan
                     <th scope="col" class="px-6 py-3">Waktu</th>
-                    <th scope="col" class="px-6 py-3">Status Scan</th>
+                    {{-- <th scope="col" class="px-6 py-3">Status Scan</th> --}}
                     <th scope="col" class="px-6 py-3">Device SN</th>
                 </tr>
             </thead>
@@ -59,7 +59,7 @@ new class extends Component {
                             <td class="font-mono px-6 py-4">{{ $request->employee?->branch?->name }}</td>
                         @endcan
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->timestamp }}</td>
-                        <td class="px-6 py-4">{{ $request->status_scan ? 'Masuk' : 'Pulang' }}</td>
+                        {{-- <td class="px-6 py-4">{{ $request->status_scan ? 'Masuk' : 'Pulang' }}</td> --}}
                         <td class="px-6 py-4">{{ $request->device_sn }}</td>
                     </tr>
                 @empty

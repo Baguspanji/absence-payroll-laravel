@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('payroll_components', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();               // Cth: Gaji Pokok, Tunjangan Transport
-            $table->enum('type', ['earning', 'deduction']); // Jenis: pendapatan atau potongan
+            $table->enum('type', ['earning', 'deduction'])->nullable(); // Jenis: pendapatan atau potongan
             $table->boolean('is_fixed')->default(true);     // Apakah jumlahnya tetap atau dihitung harian (pro-rata)
             $table->timestamps();
         });

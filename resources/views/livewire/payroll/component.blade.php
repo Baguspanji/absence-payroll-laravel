@@ -22,7 +22,7 @@ new class extends Component {
     public function with(): array
     {
         return [
-            'requests' => PayrollComponent::query()->latest()->paginate(10),
+            'requests' => PayrollComponent::query()->orderBy('type', 'asc')->latest()->paginate(10),
         ];
     }
 
@@ -99,15 +99,37 @@ new class extends Component {
                     <tr class="bg-white border-b hover:bg-gray-50">
                         <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
                         <td class="px-6 py-4">
-                            {{ $request->type == 'earning' ? 'Pendapatan' : 'Potongan' }}
+                            {{-- {{ $request->type == 'earning' ? 'Pendapatan' : 'Potongan' }} --}}
+                            @if ($request->type == 'earning')
+                                Pendapatan
+                            @elseif ($request->type == 'deduction')
+                                Potongan
+                            @else
+                                -
+                            @endif
                         </td>
-                        <td class="px-6 py-4">{{ $request->is_fixed ? 'Ya' : 'Tidak' }}</td>
+                        <td class="px-6 py-4">
+                            {{-- {{ $request->is_fixed ? 'Ya' : 'Tidak' }} --}}
+                            @if ($request->is_fixed)
+                                Tetap
+                            @else
+                                Harian
+                            @endif
+                        </td>
                         <td class="px-6 py-4 space-x-2">
-                            <button wire:click="edit({{ $request->id }})"
-                                class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
-                                <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
-                                Edit
-                            </button>
+                            @if ($request->type == null)
+                                <button type="button"
+                                    class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100">
+                                    <flux:icon name="lock-closed" class="w-4 h-4 inline-block -mt-1" />
+                                    Tidak dapat diedit
+                                </button>
+                            @else
+                                <button wire:click="edit({{ $request->id }})"
+                                    class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
+                                    <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
+                                    Edit
+                                </button>
+                            @endif
                         </td>
                     </tr>
                 @empty

@@ -28,7 +28,8 @@ new class extends Component {
 
         $startDate = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
-        $totalDaysInMonth = $startDate->daysInMonth;
+        // $totalDaysInMonth = $startDate->daysInMonth - 4; // dikurangi 4 hari cuti
+        $totalDaysInMonth = $startDate->daysInMonth; // --- IGNORE ---
 
         $employees = Employee::query()->join('users', 'employees.user_id', '=', 'users.id')->where('users.is_active', true)->select('employees.*')->get();
         $this->results = [];
@@ -40,10 +41,15 @@ new class extends Component {
                     ->where('employee_id', $employee->id)
                     ->whereBetween('date', [$startDate, $endDate])
                     ->count();
-                $totalLateMinutes = DB::table('attendance_summaries')
+                $totalWorkHours = DB::table('attendance_summaries')
                     ->where('employee_id', $employee->id)
                     ->whereBetween('date', [$startDate, $endDate])
-                    ->sum('late_minutes');
+                    ->sum('work_hours');
+                $totalDayLate = DB::table('attendance_summaries')
+                    ->where('employee_id', $employee->id)
+                    ->whereBetween('date', [$startDate, $endDate])
+                    ->where('late_minutes', '>', 0)
+                    ->count();
                 $totalOvertimeHours = DB::table('attendance_summaries')
                     ->where('employee_id', $employee->id)
                     ->whereBetween('date', [$startDate, $endDate])
@@ -57,6 +63,8 @@ new class extends Component {
 
                 // 3. Proses setiap komponen
                 foreach ($components as $component) {
+                    if ($component->type == null) continue; // Skip komponen gaji pokok, lembur & keterlambatan di sini
+
                     $finalAmount = $component->amount;
                     // Jika tidak tetap, hitung pro-rata berdasarkan hari kerja
                     if (!$component->is_fixed) {
@@ -65,7 +73,7 @@ new class extends Component {
 
                     if ($component->type === 'earning') {
                         $earnings[$component->name] = $finalAmount;
-                    } else {
+                    } else if ($component->type === 'deduction') {
                         $deductions[$component->name] = $finalAmount;
                     }
                 }
@@ -73,12 +81,22 @@ new class extends Component {
                 // Tambahkan komponen dinamis (lembur & keterlambatan)
                 $lateComponent = $components->firstWhere('name', 'Potongan Terlambat');
                 if ($lateComponent) {
-                    $deductions['Potongan Terlambat'] = $totalLateMinutes * $lateComponent->amount;
+                    // terlambat otomatis terhitung sebagai jumlah hari terlambat
+                    $deductions['Potongan Terlambat'] = $totalDayLate * $lateComponent->amount;
                 }
 
                 $overtimeComponent = $components->firstWhere('name', 'Upah Lembur');
                 if ($overtimeComponent) {
-                    $earnings['Upah Lembur'] = $totalOvertimeHours * $overtimeComponent->amount; // di sini amount = rate per jam
+                    // Konversi jam lembur ke hari
+                    $totalOvertimeDays = ceil($totalOvertimeHours / 8); // Asumsi 1 hari kerja = 8 jam
+                    $earnings['Upah Lembur'] = $totalOvertimeDays * $overtimeComponent->amount; // di sini amount = rate per jam
+                }
+
+                $basicSalaryComponent = $components->firstWhere('name', 'Gaji Pokok');
+                if ($basicSalaryComponent) {
+                    // Konversi jam kerja ke hari
+                    $totalWorkDays = ceil($totalWorkHours / 8); // Asumsi
+                    $earnings['Gaji Pokok'] = ($basicSalaryComponent->amount / $totalDaysInMonth) * $totalWorkDays;
                 }
 
                 // 4. Hitung Total dan simpan
