@@ -545,4 +545,3 @@ new class extends Component {
         </div>
     </flux:modal>
 </div>
-</div>

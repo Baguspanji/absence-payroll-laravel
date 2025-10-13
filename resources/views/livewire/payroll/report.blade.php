@@ -12,7 +12,6 @@ new class extends Component {
     public $selectedYear;
     public $years = [];
     public $months = [];
-    public $showDetailModal = false;
     public $payrollDetails = null;
     public $workSummary = null;
     public $earningComponents = [];
@@ -53,12 +52,12 @@ new class extends Component {
         $this->earningComponents = $payroll->details->where('type', 'earning')->toArray();
         $this->deductionComponents = $payroll->details->where('type', 'deduction')->toArray();
 
-        $this->showDetailModal = true;
+        $this->modal('detail-modal')->show();
     }
 
     public function closeModal()
     {
-        $this->showDetailModal = false;
+        $this->modal('detail-modal')->close();
     }
 }; ?>
 
@@ -95,7 +94,7 @@ new class extends Component {
                         <td class="px-6 py-4 font-medium">{{ $payroll->employee?->name }}</td>
                         <td class="px-6 py-4">Rp {{ number_format($payroll->net_salary, 0, ',', '.') }}</td>
                         <td class="px-6 py-4">
-                            <div class="space-x-1">
+                            <div class="space-x-1 flex flex-col md:flex-row">
                                 <a href="{{ route('payroll.slip', $payroll->id) }}" target="_blank"
                                     class="text-xs font-medium px-2 py-1.5 bg-indigo-600 text-white rounded-md cursor-pointer">
                                     Lihat Slip
@@ -119,21 +118,14 @@ new class extends Component {
 
     <div class="mt-4">{{ $payrolls->links() }}</div>
 
-    <!-- Payroll Detail Modal -->
-    @if ($showDetailModal)
-        <div class="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-[#99a1afb3] transform transition-opacity">
-            <div class="relative p-6 bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-                <button type="button" wire:click="closeModal"
-                    class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+    <!-- Modal Detail -->
+    <flux:modal name="detail-modal" class="max-w-4xl md:w-[60rem]" closeable>
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Detail Penggajian</flux:heading>
+            </div>
 
-                <h3 class="text-lg font-bold mb-4">Detail Penggajian</h3>
-
+            @if ($payrollDetails)
                 <div class="border-b pb-4 mb-4">
                     <div class="grid grid-cols-3 gap-4">
                         <div>
@@ -219,7 +211,7 @@ new class extends Component {
                     <span class="font-bold text-lg">Rp
                         {{ number_format($payrollDetails->net_salary, 0, ',', '.') }}</span>
                 </div>
-            </div>
+            @endif
         </div>
-    @endif
+    </flux:modal>
 </div>

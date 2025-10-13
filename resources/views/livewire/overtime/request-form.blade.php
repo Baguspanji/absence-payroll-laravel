@@ -7,7 +7,6 @@ use App\Models\Employee; // Import model Employee
 use Livewire\Attributes\Rule;
 
 new class extends Component {
-    // Properti untuk form
     #[Rule('required', message: 'Karyawan harus dipilih.')]
     public $employeeId = '';
 
@@ -25,7 +24,14 @@ new class extends Component {
     public function mount()
     {
         // Isi dropdown dengan daftar karyawan
-        $this->employees = Employee::orderBy('name')->get();
+        if (Auth::user()->role == 'leader') {
+            $this->employees = Employee::where('branch_id', Auth::user()->employee->branch_id)
+                ->orderBy('name')
+                ->get();
+        } else {
+            $this->employees = Employee::orderBy('name')->get();
+        }
+
         // Jika yang login adalah karyawan biasa, langsung pilih dirinya sendiri
         if (Auth::user()->role === 'employee') {
             // Sesuaikan dengan nama role Anda

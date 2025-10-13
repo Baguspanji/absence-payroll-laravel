@@ -33,8 +33,7 @@ new class extends Component {
     {
         if (Auth::user()->role == 'leader') {
             return [
-                'requests' => LeaveRequest::where('status_approval', 'pending')
-                    ->with('employee')
+                'requests' => LeaveRequest::with('employee')
                     ->whereHas('employee', function ($q) {
                         $q->where('branch_id', Auth::user()->employee->branch_id);
                     })
@@ -44,8 +43,7 @@ new class extends Component {
         }
 
         return [
-            'requests' => LeaveRequest::where('status_approval', 'pending')
-                ->with('employee.branch') // Eager load relasi employee
+            'requests' => LeaveRequest::with('employee.branch') // Eager load relasi employee
                 ->latest()
                 ->paginate(10),
         ];
@@ -84,16 +82,24 @@ new class extends Component {
                             {{ \Carbon\Carbon::parse($request->end_date)->translatedFormat('d M Y') }}</td>
                         <td class="px-6 py-4">{{ $request->reason }}</td>
                         <td class="px-6 py-4 space-x-2">
-                            <button wire:click="approve({{ $request->id }})"
-                                wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
-                                class="text-xs font-medium px-2 py-1.5 bg-green-600 text-white rounded-md cursor-pointer">
-                                Approve
-                            </button>
-                            <button wire:click="reject({{ $request->id }})"
-                                wire:confirm="Anda yakin ingin menolak pengajuan ini?"
-                                class="text-xs font-medium px-2 py-1.5 bg-red-600 text-white rounded-md cursor-pointer">
-                                Reject
-                            </button>
+                            @if ($request->status_approval === 'approved')
+                                <span
+                                    class="text-xs font-medium px-2 py-1.5 bg-green-300 text-white rounded-md">Disetujui</span>
+                            @elseif ($request->status_approval === 'rejected')
+                                <span
+                                    class="text-xs font-medium px-2 py-1.5 bg-red-300 text-white rounded-md">Ditolak</span>
+                            @else
+                                <button wire:click="approve({{ $request->id }})"
+                                    wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
+                                    class="text-xs font-medium px-2 py-1.5 bg-green-600 text-white rounded-md cursor-pointer">
+                                    Setujui
+                                </button>
+                                <button wire:click="reject({{ $request->id }})"
+                                    wire:confirm="Anda yakin ingin menolak pengajuan ini?"
+                                    class="text-xs font-medium px-2 py-1.5 bg-red-600 text-white rounded-md cursor-pointer">
+                                    Tolak
+                                </button>
+                            @endif
                         </td>
                     </tr>
                 @empty

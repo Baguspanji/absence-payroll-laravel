@@ -28,8 +28,8 @@ new class extends Component {
 
         $startDate = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfMonth();
         $endDate = $startDate->copy()->endOfMonth();
-        // $totalDaysInMonth = $startDate->daysInMonth - 4; // dikurangi 4 hari cuti
-        $totalDaysInMonth = $startDate->daysInMonth; // --- IGNORE ---
+        $totalDaysInMonth = $startDate->daysInMonth - 4; // dikurangi 4 hari cuti
+        // $totalDaysInMonth = $startDate->daysInMonth; // --- IGNORE ---
 
         $employees = Employee::query()->join('users', 'employees.user_id', '=', 'users.id')->where('users.is_active', true)->select('employees.*')->get();
         $this->results = [];
