@@ -1,7 +1,7 @@
 FROM dunglas/frankenphp
 
 RUN install-php-extensions \
-    pcntl pdo pdo_sqlite mbstring tokenizer xml ctype json curl bcmath sockets opcache gd exif fileinfo zip
+    pcntl bcmath sockets gd exif zip
 # Add other PHP extensions here...
 
 # Add composer dependencies
