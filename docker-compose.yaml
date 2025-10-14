@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   php:
     build:
@@ -8,12 +10,12 @@ services:
     restart: unless-stopped
     working_dir: /app
     environment:
-      SERVER_NAME: ':80'
+      SERVER_NAME: ":80"
     ports:
-      - '8001:80'
+      - "8001:80"
     volumes:
-      - 'caddy_data:/data'
-      - 'caddy_config:/config'
+      - "caddy_data:/data"
+      - "caddy_config:/config"
 volumes:
   caddy_data: null
   caddy_config: null
