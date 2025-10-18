@@ -487,7 +487,7 @@ new class extends Component {
                                     <tbody>
                                         @foreach ($payrollComponents as $index => $item)
                                             <tr class="bg-white border-b">
-                                                <td class="px-3 py-2">{{ $item->name }}</td>
+                                                <td class="px-3 py-2 whitespace-nowrap">{{ $item->name }}</td>
                                                 <td class="px-3 py-2">
                                                     {{ $item->pivot?->type == 'earning' ? 'Pendapatan' : 'Potongan' }}
                                                 </td>
