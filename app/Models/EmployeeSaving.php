@@ -24,6 +24,6 @@ class EmployeeSaving extends Model
 
     public function transactions(): HasMany
     {
-        return $this->hasMany(EmployeeSavingTransaction::class);
+        return $this->hasMany(EmployeeSavingTransaction::class, 'employee_saving_id');
     }
 }

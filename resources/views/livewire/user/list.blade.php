@@ -3,15 +3,17 @@
 use Livewire\Volt\Component;
 use App\Models\User;
 use App\Models\Employee;
+use App\Models\EmployeeSaving;
 use App\Models\Branch;
 use App\Models\Schedule;
 use App\Models\Shift;
 use App\Models\PayrollComponent;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
 
 new class extends Component {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $isEdit = false;
     public $userId = null;
@@ -23,6 +25,9 @@ new class extends Component {
     public $email = '';
     #[Rule('required', message: 'Akses harus dipilih.')]
     public $role = '';
+
+    #[Rule('nullable', 'image', 'max:2048', message: 'Foto harus berupa gambar dengan ukuran maksimal 2MB.')]
+    public $photo = null;
 
     public $position = '';
     #[Rule('required', message: 'Cabang harus dipilih.')]
@@ -39,6 +44,8 @@ new class extends Component {
     public $payrollComponents = [];
 
     public $optionPayrollComponents = [];
+
+    public ?EmployeeSaving $employeeSaving = null;
 
     public function mount()
     {
@@ -158,7 +165,8 @@ new class extends Component {
     {
         $this->resetForm();
 
-        $this->nip = (new Employee())->generateNip();
+        $employee = new Employee();
+        $this->nip = $employee->generateNip();
 
         $this->modal('form-data')->show();
     }
@@ -173,6 +181,10 @@ new class extends Component {
         $this->name = $user->name;
         $this->email = $user->email;
         $this->role = $user->role;
+
+        // mount employee image
+        $this->photo = $user->employee?->image_url;
+
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
         $this->schedule = $user->employee?->schedule;
@@ -191,11 +203,22 @@ new class extends Component {
         $this->name = $user->name;
         $this->email = $user->email;
         $this->role = $user->role;
+
+        // mount employee image
+        $this->photo = $user->employee?->image_url;
+
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
         $this->shiftId = $user->employee?->schedule?->shift_id;
 
         $this->modal('form-data')->show();
+    }
+
+    public function tabungan(User $user)
+    {
+        $this->employeeSaving = EmployeeSaving::with('transactions')->where('employee_id', $user->employee?->id)->first();
+
+        $this->modal('employee-saving-data')->show();
     }
 
     public function updateStatus(User $user)
@@ -209,6 +232,12 @@ new class extends Component {
     public function submit()
     {
         $this->validate();
+
+        $imageUrl = null;
+        if ($this->photo) {
+            $imagePath = $this->photo->store('employee_photos', 'public');
+            $imageUrl = '/storage/' . $imagePath;
+        }
 
         if (!$this->isEdit) {
             $user = User::create([
@@ -224,6 +253,7 @@ new class extends Component {
                 'nip' => $this->nip,
                 'name' => $this->name,
                 'position' => $this->position,
+                'image_url' => $imageUrl,
             ]);
 
             Schedule::create([
@@ -244,6 +274,9 @@ new class extends Component {
             $employee->branch_id = $this->branchId;
             $employee->name = $this->name;
             $employee->position = $this->position;
+            if ($imageUrl) {
+                $employee->image_url = $imageUrl;
+            }
             $employee->save();
 
             $schedule = Schedule::where('employee_id', $employee->id)->first();
@@ -285,8 +318,8 @@ new class extends Component {
         <table class="w-full text-sm text-left text-gray-500">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3">NIP</th>
-                    <th scope="col" class="px-6 py-3">Nama Karyawan</th>
+                    <th scope="col" class="px-6 py-3">Foto</th>
+                    <th scope="col" class="px-6 py-3">Karyawan</th>
                     <th scope="col" class="px-6 py-3">Email</th>
                     <th scope="col" class="px-6 py-3">Cabang</th>
                     <th scope="col" class="px-6 py-3">Jabatan</th>
@@ -298,8 +331,23 @@ new class extends Component {
             <tbody>
                 @forelse ($requests as $request)
                     <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="font-mono px-6 py-4 text-green-600">{{ $request->employee?->nip }}</td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->employee?->name }}</td>
+                        <td class="px-6 py-4">
+                            @if ($request->employee?->image_url)
+                                <img src="{{ $request->employee?->image_url }}" alt="Foto Karyawan"
+                                    class="w-10 h-10 rounded-full object-cover" />
+                            @else
+                                <div
+                                    class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
+                                    <flux:icon name="user" class="w-6 h-6" />
+                                </div>
+                            @endif
+                        </td>
+                        <td class="px-6 py-4 font-medium text-gray-900">
+                            <div class="flex items-center space-x-3">
+                                <span class="font-mono text-green-600">{{ $request->employee?->nip }}</span>
+                                <span>{{ $request->employee?->name }}</span>
+                            </div>
+                        </td>
                         <td class="px-6 py-4">{{ $request->email }}</td>
                         <td class="px-6 py-4">{{ $request->employee?->branch?->name }}</td>
                         <td class="px-6 py-4">{{ $request->employee?->position }}</td>
@@ -337,6 +385,11 @@ new class extends Component {
                                 class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer">
                                 <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
                                 Edit
+                            </button>
+                            <button wire:click="tabungan({{ $request->id }})"
+                                class="text-sm text-green-600 px-2 py-1 rounded hover:bg-green-100 cursor-pointer">
+                                <flux:icon name="banknotes" class="w-4 h-4 inline-block -mt-1" />
+                                Tabungan
                             </button>
                         </td>
                     </tr>
@@ -390,6 +443,10 @@ new class extends Component {
                 @endforeach
             </flux:select>
 
+            <div class="md:col-span-2">
+                <flux:input label="Foto Karyawan" type="file" wire:model="photo" />
+            </div>
+
             <div class="flex md:col-span-2">
                 <flux:spacer />
                 <flux:button type="button" wire:click="submit" variant="primary">Simpan</flux:button>
@@ -408,40 +465,46 @@ new class extends Component {
                 <div class="space-y-4 pr-4">
                     <div class="mb-4">
                         <h3 class="font-semibold text-lg text-gray-800 mb-2">Informasi Karyawan</h3>
-                        <div class="grid grid-cols-3 gap-2 text-sm">
-                            <div>NIP/PIN</div>
-                            <div class="col-span-2">{{ $nip }}</div>
+                        <div class="flex md:flex-row-reverse gap-6 justify-between">
+                            <div>
+                                <img src="{{ $photo }}" alt="Foto Karyawan"
+                                    class="w-24 rounded-md object-cover" />
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-sm min-w-sm">
+                                <div>NIP/PIN</div>
+                                <div class="col-span-2">{{ $nip }}</div>
 
-                            <div>Nama</div>
-                            <div class="col-span-2">{{ $name }}</div>
+                                <div>Nama</div>
+                                <div class="col-span-2">{{ $name }}</div>
 
-                            <div>Email</div>
-                            <div class="col-span-2">{{ $email }}</div>
+                                <div>Email</div>
+                                <div class="col-span-2">{{ $email }}</div>
 
-                            <div>Akses</div>
-                            <div class="col-span-2">
-                                <span class="text-xs font-bold px-2 py-1 rounded-md bg-blue-100 text-blue-800">
-                                    @if ($role == 'admin')
-                                        ADMIN
-                                    @elseif ($role == 'leader')
-                                        KEPALA TOKO
-                                    @elseif ($role == 'employee')
-                                        KARYAWAN
-                                    @else
-                                        -
+                                <div>Akses</div>
+                                <div class="col-span-2">
+                                    <span class="text-xs font-bold px-2 py-1 rounded-md bg-blue-100 text-blue-800">
+                                        @if ($role == 'admin')
+                                            ADMIN
+                                        @elseif ($role == 'leader')
+                                            KEPALA TOKO
+                                        @elseif ($role == 'employee')
+                                            KARYAWAN
+                                        @else
+                                            -
+                                        @endif
+                                    </span>
+                                </div>
+
+                                <div>Cabang</div>
+                                <div class="col-span-2">
+                                    @if ($branchId)
+                                        {{ collect($branches)->firstWhere('value', $branchId)['label'] ?? '' }}
                                     @endif
-                                </span>
-                            </div>
+                                </div>
 
-                            <div>Cabang</div>
-                            <div class="col-span-2">
-                                @if ($branchId)
-                                    {{ collect($branches)->firstWhere('value', $branchId)['label'] ?? '' }}
-                                @endif
+                                <div>Jabatan</div>
+                                <div class="col-span-2">{{ $position }}</div>
                             </div>
-
-                            <div>Jabatan</div>
-                            <div class="col-span-2">{{ $position }}</div>
                         </div>
                     </div>
                 </div>
@@ -549,6 +612,61 @@ new class extends Component {
                 <flux:button type="button" wire:click="$dispatch('closeModal', 'add-payroll-component')"
                     variant="filled">Batal</flux:button>
                 <flux:button type="button" wire:click="addPayrollComponent" variant="primary">Tambah</flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Modal Employee Saving Data -->
+    <flux:modal name="employee-saving-data" class="md:w-4xl">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Data Tabungan Karyawan</flux:heading>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                @if ($employeeSaving)
+                    <div class="mb-4">
+                        <h3 class="font-semibold text-lg text-gray-800 mb-2">Riwayat Transaksi</h3>
+                        @if ($employeeSaving->transactions && $employeeSaving->transactions->count() > 0)
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm text-left text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                        <tr>
+                                            <th class="px-3 py-2">Tanggal</th>
+                                            <th class="px-3 py-2">Tipe</th>
+                                            <th class="px-3 py-2">Jumlah</th>
+                                            <th class="px-3 py-2">Saldo</th>
+                                            <th class="px-3 py-2">Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($employeeSaving->transactions as $transaction)
+                                            <tr class="bg-white border-b">
+                                                <td class="px-3 py-2">
+                                                    {{ $transaction->created_at->format('d/m/Y H:i') }}</td>
+                                                <td class="px-3 py-2">
+                                                    <span
+                                                        class="px-2 py-1 text-xs rounded-md {{ $transaction->type == 'debit' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                                        {{ $transaction->type == 'debit' ? 'Tabungan' : 'Penarikan' }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-3 py-2">Rp
+                                                    {{ number_format($transaction->amount, 0, ',', '.') }}</td>
+                                                <td class="px-3 py-2">Rp
+                                                    {{ number_format($transaction->balance_after, 0, ',', '.') }}</td>
+                                                <td class="px-3 py-2">{{ $transaction->description ?? '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="py-4 text-center text-gray-500 bg-gray-50 rounded">
+                                Belum ada transaksi tabungan.
+                            </div>
+                        @endif
+                    </div>
+                @endif
             </div>
         </div>
     </flux:modal>

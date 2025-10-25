@@ -19,6 +19,7 @@ class Employee extends Model
         'nip',
         'name',
         'position',
+        'image_url',
     ];
 
     public function user(): BelongsTo
