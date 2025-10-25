@@ -617,7 +617,7 @@ new class extends Component {
     </flux:modal>
 
     <!-- Modal Employee Saving Data -->
-    <flux:modal name="employee-saving-data" class="md:w-4xl">
+    <flux:modal name="employee-saving-data" class="md:min-w-[54rem]">
         <div class="space-y-4">
             <div>
                 <flux:heading size="lg">Data Tabungan Karyawan</flux:heading>
@@ -626,7 +626,12 @@ new class extends Component {
             <div class="grid grid-cols-1 gap-4">
                 @if ($employeeSaving)
                     <div class="mb-4">
-                        <h3 class="font-semibold text-lg text-gray-800 mb-2">Riwayat Transaksi</h3>
+                        <div class="flex justify-between items-center">
+                            <h3 class="font-semibold text-lg text-gray-800 mb-2">Riwayat Transaksi</h3>
+                            <h4 class="text-sm font-medium text-gray-700">
+                                Saldo Saat Ini: <span class="font-semibold">Rp {{ number_format($employeeSaving->balance, 0, ',', '.') }}</span>
+                            </h4>
+                        </div>
                         @if ($employeeSaving->transactions && $employeeSaving->transactions->count() > 0)
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left text-gray-500">
@@ -665,6 +670,10 @@ new class extends Component {
                                 Belum ada transaksi tabungan.
                             </div>
                         @endif
+                    </div>
+                @else
+                    <div class="py-4 text-center text-gray-500 bg-gray-50 rounded">
+                        Data tabungan karyawan tidak ditemukan.
                     </div>
                 @endif
             </div>

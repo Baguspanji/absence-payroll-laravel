@@ -14,7 +14,7 @@ class EmployeeSavingService
         return DB::transaction(function () use ($employee, $amount, $description, $createdBy) {
             $saving = $employee->employeeSaving()->firstOrCreate(['employee_id' => $employee->id]);
 
-            $balanceBefore = $saving->balance;
+            $balanceBefore = $saving->balance ?? 0;
             $balanceAfter = $balanceBefore + $amount;
 
             $saving->update(['balance' => $balanceAfter]);

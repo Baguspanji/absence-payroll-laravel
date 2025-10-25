@@ -68,6 +68,18 @@ class DatabaseSeeder extends Seeder
         ]);
 
         \App\Models\PayrollComponent::create([
+            'name'     => 'Potongan Tabungan',
+            'type'     => null,
+            'is_fixed' => true,
+        ]);
+
+        \App\Models\PayrollComponent::create([
+            'name'     => 'Potongan Voucher',
+            'type'     => 'deduction',
+            'is_fixed' => true,
+        ]);
+
+        \App\Models\PayrollComponent::create([
             'name'     => 'Potongan Terlambat',
             'type'     => null,
             'is_fixed' => false,

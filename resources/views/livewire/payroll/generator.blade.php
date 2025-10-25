@@ -99,6 +99,14 @@ new class extends Component {
                     $earnings['Gaji Pokok'] = ($basicSalaryComponent->amount / $totalDaysInMonth) * $totalWorkDays;
                 }
 
+                $savingComponent = $components->firstWhere('name', 'Potongan Tabungan');
+                if ($savingComponent) {
+                    $deductions['Potongan Tabungan'] = $savingComponent->amount;
+
+                    $savingService = app()->make(\App\Services\EmployeeSavingService::class);
+                    $savingService->deposit($employee, $savingComponent->amount, 'Potongan Tabungan Payroll ' . $startDate->translatedFormat('F Y'), null);
+                }
+
                 // 4. Hitung Total dan simpan
                 $totalEarnings = array_sum($earnings);
                 $totalDeductions = array_sum($deductions);
