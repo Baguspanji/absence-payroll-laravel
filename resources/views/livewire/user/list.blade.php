@@ -154,6 +154,15 @@ new class extends Component {
         $this->dispatch('alert-shown', message: 'Komponen gaji berhasil dihapus!', type: 'success');
     }
 
+    public function create()
+    {
+        $this->resetForm();
+
+        $this->nip = (new Employee())->generateNip();
+
+        $this->modal('form-data')->show();
+    }
+
     public function detail(User $user)
     {
         $user->load(['employee.schedule', 'employee.payrollComponents']);
@@ -233,7 +242,6 @@ new class extends Component {
 
             $employee = Employee::find($user->employee?->id);
             $employee->branch_id = $this->branchId;
-            $employee->nip = $this->nip;
             $employee->name = $this->name;
             $employee->position = $this->position;
             $employee->save();
@@ -267,7 +275,7 @@ new class extends Component {
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Daftar Pengguna</h2>
         <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
-            x-on:click="$flux.modal('form-data').show(); $wire.resetForm();">
+            wire:click="create">
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
             Tambah Pengguna
         </button>
@@ -277,7 +285,7 @@ new class extends Component {
         <table class="w-full text-sm text-left text-gray-500">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-6 py-3">#</th>
+                    <th scope="col" class="px-6 py-3">NIP</th>
                     <th scope="col" class="px-6 py-3">Nama Karyawan</th>
                     <th scope="col" class="px-6 py-3">Email</th>
                     <th scope="col" class="px-6 py-3">Cabang</th>
@@ -358,7 +366,7 @@ new class extends Component {
                 <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />
             </div>
 
-            <flux:input label="Nip/Pin ADMIN" placeholder="Masukkan Nip/Pin ADMIN" wire:model="nip" />
+            <flux:input label="Nip/Pin ADMIN" placeholder="Masukkan Nip/Pin ADMIN" wire:model="nip" readonly />
 
             <flux:input label="Email" placeholder="Masukkan Email" wire:model="email" />
 

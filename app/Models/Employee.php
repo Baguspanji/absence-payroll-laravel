@@ -42,4 +42,11 @@ class Employee extends Model
             ->withPivot('amount')
             ->withTimestamps();
     }
+
+    public function generateNip(): string
+    {
+        $latestEmployee  = self::latest()->first();
+        $nextNumber = $latestEmployee ? ((int) substr($latestEmployee->nip, -4)) + 1 : 1;
+        return date('Y') . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+    }
 }
