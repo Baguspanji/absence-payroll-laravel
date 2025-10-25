@@ -43,6 +43,11 @@ class Employee extends Model
             ->withTimestamps();
     }
 
+    public function employeeSaving(): HasOne
+    {
+        return $this->hasOne(EmployeeSaving::class);
+    }
+
     public function generateNip(): string
     {
         $latestEmployee  = self::latest()->first();
