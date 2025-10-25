@@ -11,6 +11,7 @@ use App\Models\PayrollComponent;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Livewire\Attributes\Rule;
+use Illuminate\Support\Facades\Storage;
 
 new class extends Component {
     use WithPagination, WithFileUploads;
@@ -262,7 +263,16 @@ new class extends Component {
         $imageUrl = null;
         if ($this->photo) {
             $imagePath = $this->photo->store('employee_photos', 'public');
-            $imageUrl = '/storage/' . $imagePath;
+
+            // Generate unique image URL
+            $imageUrl = '/storage/employee_photos/' . uniqid() . '_' . time() . '.' . $this->photo->getClientOriginalExtension();
+
+            // Compress the uploaded image
+            $fullPath = storage_path('app/public/' . $imagePath);
+            compressImage($fullPath, storage_path('app/public/' . str_replace('/storage', '', $imageUrl)), 75);
+
+            // delete original image
+            Storage::disk('public')->delete($imagePath);
         }
 
         if (!$this->isEdit) {
@@ -368,8 +378,8 @@ new class extends Component {
                                 </div>
                             @endif
                         </td>
-                        <td class="px-6 py-4 font-medium text-gray-900">
-                            <div class="flex items-center space-x-3">
+                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                            <div class="flex flex-col items-start space-x-3">
                                 <span class="font-mono text-green-600">{{ $request->employee?->nip }}</span>
                                 <span>{{ $request->employee?->name }}</span>
                             </div>
