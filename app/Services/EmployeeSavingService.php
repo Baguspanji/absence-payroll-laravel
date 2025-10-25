@@ -33,7 +33,7 @@ class EmployeeSavingService
     public function withdraw(Employee $employee, float $amount, string $description = null, int $createdBy = null): EmployeeSavingTransaction
     {
         return DB::transaction(function () use ($employee, $amount, $description, $createdBy) {
-            $saving = $employee->saving;
+            $saving = $employee->employeeSaving;
 
             if (!$saving || $saving->balance < $amount) {
                 throw new \Exception('Saldo tidak mencukupi');

@@ -41,6 +41,9 @@ new class extends Component {
 
     public $schedule = null;
 
+    public $withdrawalAmount = 0;
+    public $withdrawalDescription = '';
+
     public $payrollComponents = [];
 
     public $optionPayrollComponents = [];
@@ -219,6 +222,29 @@ new class extends Component {
         $this->employeeSaving = EmployeeSaving::with('transactions')->where('employee_id', $user->employee?->id)->first();
 
         $this->modal('employee-saving-data')->show();
+    }
+
+    public function openWidrawalModal()
+    {
+        $this->withdrawalAmount = 0;
+        $this->withdrawalDescription = '';
+
+        $this->modal('employee-saving-widrawal-modal')->show();
+    }
+
+    public function submitWidrawal()
+    {
+        $this->validate([
+            'withdrawalAmount' => 'required|numeric|min:1|max:' . ($this->employeeSaving ? $this->employeeSaving->balance : 0),
+            'withdrawalDescription' => 'nullable|string|max:255',
+        ]);
+
+        // Process the withdrawal
+        $savingService = app()->make(\App\Services\EmployeeSavingService::class);
+        $savingService->withdraw($this->employeeSaving->employee, $this->withdrawalAmount, $this->withdrawalDescription ?: 'Penarikan Tabungan ' . now()->translatedFormat('F Y'), null);
+
+        $this->dispatch('alert-shown', message: 'Penarikan tabungan berhasil dilakukan!', type: 'success');
+        $this->modal('employee-saving-widrawal-modal')->close();
     }
 
     public function updateStatus(User $user)
@@ -619,8 +645,12 @@ new class extends Component {
     <!-- Modal Employee Saving Data -->
     <flux:modal name="employee-saving-data" class="md:min-w-[54rem]">
         <div class="space-y-4">
-            <div>
+            <div class="flex pr-8 justify-between items-center">
                 <flux:heading size="lg">Data Tabungan Karyawan</flux:heading>
+                <flux:button type="button" variant="ghost" size="xs" wire:click="openWidrawalModal"
+                    :disabled="!$employeeSaving">
+                    Tarik Tabungan
+                </flux:button>
             </div>
 
             <div class="grid grid-cols-1 gap-4">
@@ -629,7 +659,8 @@ new class extends Component {
                         <div class="flex justify-between items-center">
                             <h3 class="font-semibold text-lg text-gray-800 mb-2">Riwayat Transaksi</h3>
                             <h4 class="text-sm font-medium text-gray-700">
-                                Saldo Saat Ini: <span class="font-semibold">Rp {{ number_format($employeeSaving->balance, 0, ',', '.') }}</span>
+                                Saldo Saat Ini: <span class="font-semibold">Rp
+                                    {{ number_format($employeeSaving->balance, 0, ',', '.') }}</span>
                             </h4>
                         </div>
                         @if ($employeeSaving->transactions && $employeeSaving->transactions->count() > 0)
@@ -676,6 +707,27 @@ new class extends Component {
                         Data tabungan karyawan tidak ditemukan.
                     </div>
                 @endif
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Modal Widrawal -->
+    <flux:modal name="employee-saving-widrawal-modal" class="md:w-md">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Tarik Tabungan Karyawan</flux:heading>
+            </div>
+
+            <flux:input type="number" label="Jumlah Penarikan" placeholder="Masukkan Jumlah Penarikan"
+                wire:model="withdrawalAmount" />
+
+            <flux:input type="text" label="Keterangan" placeholder="Masukkan Keterangan (opsional)"
+                wire:model="withdrawalDescription" />
+
+            <div class="flex justify-end space-x-2">
+                <flux:button type="button" x-on:click="$flux.modal('employee-saving-widrawal-modal').close()"
+                    variant="filled">Batal</flux:button>
+                <flux:button type="button" wire:click="submitWidrawal" variant="primary">Tarik</flux:button>
             </div>
         </div>
     </flux:modal>
