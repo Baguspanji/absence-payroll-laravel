@@ -37,6 +37,11 @@ class Employee extends Model
         return $this->hasOne(Schedule::class);
     }
 
+    public function schedules()
+    {
+        return $this->hasMany(Schedule::class);
+    }
+
     public function payrollComponents(): BelongsToMany
     {
         return $this->belongsToMany(PayrollComponent::class, 'employee_payroll_components', 'employee_id', 'payroll_component_id')

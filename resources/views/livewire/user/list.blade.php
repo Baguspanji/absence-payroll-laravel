@@ -36,11 +36,11 @@ new class extends Component {
 
     public $branches = [];
     #[Rule('required', message: 'Cabang harus dipilih.')]
-    public $shiftId = '';
+    public $shiftIds = [];
 
     public $shifts = [];
 
-    public $schedule = null;
+    public $schedules = [];
 
     public $withdrawalAmount = 0;
     public $withdrawalDescription = '';
@@ -177,7 +177,7 @@ new class extends Component {
 
     public function detail(User $user)
     {
-        $user->load(['employee.schedule', 'employee.payrollComponents']);
+        $user->load(['employee.schedules', 'employee.payrollComponents']);
 
         $this->userId = $user->id;
 
@@ -191,7 +191,7 @@ new class extends Component {
 
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
-        $this->schedule = $user->employee?->schedule;
+        $this->schedules = $user->employee?->schedules;
 
         $this->payrollComponents = $user->employee?->payrollComponents;
 
@@ -209,11 +209,11 @@ new class extends Component {
         $this->role = $user->role;
 
         // mount employee image
-        $this->photo = $user->employee?->image_url;
+        // $this->photo = $user->employee?->image_url;
 
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
-        $this->shiftId = $user->employee?->schedule?->shift_id;
+        $this->shiftIds = $user->employee?->schedules?->pluck('shift_id')->toArray();
 
         $this->modal('form-data')->show();
     }
@@ -292,11 +292,12 @@ new class extends Component {
                 'image_url' => $imageUrl,
             ]);
 
-            Schedule::create([
-                'employee_id' => $employee->id,
-                'shift_id' => $this->shiftId,
-                'date' => now(),
-            ]);
+            foreach ($this->shiftIds as $shiftId) {
+                Schedule::create([
+                    'employee_id' => $employee->id,
+                    'shift_id' => $shiftId,
+                ]);
+            }
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil dibuat!', type: 'success');
         } else {
@@ -315,9 +316,14 @@ new class extends Component {
             }
             $employee->save();
 
-            $schedule = Schedule::where('employee_id', $employee->id)->first();
-            $schedule->shift_id = $this->shiftId;
-            $schedule->save();
+            Schedule::where('employee_id', $employee->id)->delete();
+
+            foreach ($this->shiftIds as $shiftId) {
+                Schedule::create([
+                    'employee_id' => $employee->id,
+                    'shift_id' => $shiftId,
+                ]);
+            }
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil diperbarui!', type: 'success');
         }
@@ -336,7 +342,7 @@ new class extends Component {
         $this->role = '';
         $this->branchId = '';
         $this->position = '';
-        $this->shiftId = '';
+        $this->shiftIds = [];
     }
 }; ?>
 
@@ -473,11 +479,17 @@ new class extends Component {
 
             <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
 
-            <flux:select label="Shift" wire:model="shiftId" placeholder="Pilih Shift...">
-                @foreach ($shifts as $item)
-                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
-                @endforeach
-            </flux:select>
+            <div class="col-span-2">
+                <flux:field label="Shift">
+                    <flux:label class="mb-2 block text-sm font-medium text-gray-700">Pilih Shift Karyawan</flux:label>
+                    <div class="grid grid-cols-2 gap-2">
+                        @foreach ($shifts as $shift)
+                            <flux:checkbox wire:model="shiftIds" value="{{ $shift['value'] }}"
+                                label="{{ $shift['label'] }}" />
+                        @endforeach
+                    </div>
+                </flux:field>
+            </div>
 
             <div class="md:col-span-2">
                 <flux:input label="Foto Karyawan" type="file" wire:model="photo" />
@@ -549,7 +561,7 @@ new class extends Component {
                     <div class="mb-4">
                         <h3 class="font-bold text-lg text-gray-800 mb-2">Jadwal Kerja</h3>
 
-                        @if ($schedule)
+                        @if ($schedules)
                             <div class="overflow-x-auto">
                                 <table class="w-full text-sm text-left text-gray-500">
                                     <thead class="text-xs text-gray-700 uppercase bg-gray-50">
@@ -560,11 +572,13 @@ new class extends Component {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="bg-white border-b">
-                                            <td class="px-3 py-2">{{ $schedule->shift?->name }}</td>
-                                            <td class="px-3 py-2">{{ $schedule->shift?->clock_in }}</td>
-                                            <td class="px-3 py-2">{{ $schedule->shift?->clock_out }}</td>
-                                        </tr>
+                                        @foreach ($schedules as $schedule)
+                                            <tr class="bg-white border-b">
+                                                <td class="px-3 py-2">{{ $schedule->shift?->name }}</td>
+                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_in }}</td>
+                                                <td class="px-3 py-2">{{ $schedule->shift?->clock_out }}</td>
+                                            </tr>
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>
