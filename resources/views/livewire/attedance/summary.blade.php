@@ -80,48 +80,47 @@ new class extends Component {
         </form>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">#</th>
-                    <th scope="col" class="px-6 py-3">Nama Pegawai</th>
-                    @can('admin')
-                        <th scope="col" class="px-6 py-3">Cabang</th>
-                    @endcan
-                    <th scope="col" class="px-6 py-3">Tanggal</th>
-                    <th scope="col" class="px-6 py-3">Waktu</th>
-                    <th scope="col" class="px-6 py-3">Total Kerja(jam)</th>
-                    <th scope="col" class="px-6 py-3">Telat(menit)</th>
-                    <th scope="col" class="px-6 py-3">Lembur(jam)</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="font-mono px-6 py-4">{{ $request->employee?->nip }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->employee?->name }}</td>
-                        @can('admin')
-                            <td class="font-mono px-6 py-4">{{ $request->employee?->branch?->name }}</td>
-                        @endcan
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->date }}</td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->clock_in }} -
-                            {{ $request->clock_out }}
-                        </td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->work_hours }}</td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->late_minutes }}</td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->overtime_hours }}</td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="7" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data riwayat.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    <x-table :headers="['Pegawai', 'Tanggal', 'Waktu', 'Total Kerja(jam)', 'Telat(menit)', 'Lembur(jam)']" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
+        maxHeight="540px">
+        @foreach ($requests as $request)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900 whitespace-nowrap">
+                    <div class="flex items-center gap-4">
+                        @if ($request->employee?->image_url)
+                            <img src="{{ $request->employee?->image_url }}" alt="Foto Karyawan"
+                                class="w-10 h-10 rounded object-cover" />
+                        @else
+                            <div class="w-10 h-10 rounded bg-gray-200 flex items-center justify-center text-gray-500">
+                                <flux:icon name="user" class="w-6 h-6" />
+                            </div>
+                        @endif
+                        <div class="flex flex-col items-start">
+                            <span class="font-mono text-green-600">{{ $request->employee?->nip }}</span>
+                            <span>{{ $request->employee?->name }}</span>
+                            @can('admin')
+                                <span class="text-sm text-gray-500">{{ $request->employee?->branch?->name }}</span>
+                            @endcan
+                        </div>
+                    </div>
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->date }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->clock_in }} - {{ $request->clock_out }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->work_hours }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->late_minutes }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->overtime_hours }}
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">
         {{ $requests->links() }}

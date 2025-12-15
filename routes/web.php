@@ -10,7 +10,6 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 })->name('home');
 
-
 Route::middleware(['auth'])->group(function () {
     Volt::route('dashboard', 'dashboard')->name('dashboard');
 
@@ -72,7 +71,7 @@ Route::middleware(['log.iclock'])->group(function () {
     // })->where('any', '.*');
 
     Route::get('iclock/cdata', [FingerprintController::class, 'getCData']);
-    /// Route untuk mesin "bertanya" / check-in
+    // / Route untuk mesin "bertanya" / check-in
     Route::get('iclock/getrequest', [FingerprintController::class, 'getRequest']);
 
     Route::post('iclock/devicecmd', function () {
@@ -88,4 +87,4 @@ Route::middleware(['log.iclock'])->group(function () {
     Route::post('iclock/edata', [FingerprintController::class, 'cData']);
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

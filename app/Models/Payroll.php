@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -28,8 +29,8 @@ class Payroll extends Model
     {
         return [
             'period_start' => 'date',
-            'period_end'   => 'date',
-            'net_salary'   => 'decimal:2',
+            'period_end' => 'date',
+            'net_salary' => 'decimal:2',
         ];
     }
 

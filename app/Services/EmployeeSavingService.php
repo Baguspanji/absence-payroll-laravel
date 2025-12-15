@@ -3,13 +3,12 @@
 namespace App\Services;
 
 use App\Models\Employee;
-use App\Models\EmployeeSaving;
 use App\Models\EmployeeSavingTransaction;
 use Illuminate\Support\Facades\DB;
 
 class EmployeeSavingService
 {
-    public function deposit(Employee $employee, float $amount, string $description = null, int $createdBy = null): EmployeeSavingTransaction
+    public function deposit(Employee $employee, float $amount, ?string $description = null, ?int $createdBy = null): EmployeeSavingTransaction
     {
         return DB::transaction(function () use ($employee, $amount, $description, $createdBy) {
             $saving = $employee->employeeSaving()->firstOrCreate(['employee_id' => $employee->id]);
@@ -30,12 +29,12 @@ class EmployeeSavingService
         });
     }
 
-    public function withdraw(Employee $employee, float $amount, string $description = null, int $createdBy = null): EmployeeSavingTransaction
+    public function withdraw(Employee $employee, float $amount, ?string $description = null, ?int $createdBy = null): EmployeeSavingTransaction
     {
         return DB::transaction(function () use ($employee, $amount, $description, $createdBy) {
             $saving = $employee->employeeSaving;
 
-            if (!$saving || $saving->balance < $amount) {
+            if (! $saving || $saving->balance < $amount) {
                 throw new \Exception('Saldo tidak mencukupi');
             }
 

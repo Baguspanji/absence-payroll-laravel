@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Console\Commands;
 
 use Carbon\Carbon;
@@ -7,7 +8,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProcessAttendance extends Command
 {
-    protected $signature   = 'app:process-attendance';
+    protected $signature = 'app:process-attendance';
+
     protected $description = 'Merekapitulasi data absensi mentah menjadi laporan harian yang akurat (Multi-Shift)';
 
     public function handle()
@@ -21,6 +23,7 @@ class ProcessAttendance extends Command
 
         if ($rawAttendances->isEmpty()) {
             $this->info('Tidak ada data absensi baru untuk diproses.');
+
             return;
         }
 
@@ -32,6 +35,7 @@ class ProcessAttendance extends Command
             $employee = DB::table('employees')->where('nip', $nip)->first();
             if (! $employee) {
                 $this->warn("Karyawan dengan NIP {$nip} tidak ditemukan. Melewatkan...");
+
                 continue;
             }
 
@@ -52,6 +56,7 @@ class ProcessAttendance extends Command
 
                 if ($schedules->isEmpty()) {
                     $this->warn("Jadwal shift untuk karyawan NIP {$nip} pada tanggal {$date} tidak ditemukan. Melewatkan...");
+
                     continue;
                 }
 
@@ -75,8 +80,8 @@ class ProcessAttendance extends Command
                     }
 
                     // Parse shift times
-                    $shiftStart = Carbon::parse($date . ' ' . $schedule->clock_in);
-                    $shiftEnd   = Carbon::parse($date . ' ' . $schedule->clock_out);
+                    $shiftStart = Carbon::parse($date.' '.$schedule->clock_in);
+                    $shiftEnd = Carbon::parse($date.' '.$schedule->clock_out);
 
                     // Handle overnight shift
                     if ($shiftEnd->lt($shiftStart)) {
@@ -88,11 +93,12 @@ class ProcessAttendance extends Command
                     // Toleransi waktu untuk mencocokkan absensi dengan shift (misal: 3 jam sebelum/sesudah shift)
                     $shiftWindow = 3 * 60 * 60; // 3 jam dalam detik
                     $windowStart = $shiftStart->copy()->subSeconds($shiftWindow);
-                    $windowEnd   = $shiftEnd->copy()->addSeconds($shiftWindow);
+                    $windowEnd = $shiftEnd->copy()->addSeconds($shiftWindow);
 
                     // Filter attendances yang masuk dalam window shift ini
                     $shiftAttendances = $sortedAttendances->filter(function ($attendance) use ($windowStart, $windowEnd) {
                         $attendanceTime = Carbon::parse($attendance->timestamp);
+
                         return $attendanceTime->between($windowStart, $windowEnd);
                     });
 
@@ -101,9 +107,9 @@ class ProcessAttendance extends Command
                     }
 
                     // Initialize variables
-                    $clockInRecord      = null;
-                    $clockOutRecord     = null;
-                    $minDiffForClockIn  = PHP_INT_MAX;
+                    $clockInRecord = null;
+                    $clockOutRecord = null;
+                    $minDiffForClockIn = PHP_INT_MAX;
                     $minDiffForClockOut = PHP_INT_MAX;
 
                     // Cari clock in dan clock out yang paling mendekati shift
@@ -115,7 +121,7 @@ class ProcessAttendance extends Command
                             $diffWithShiftStart = abs($attendanceTime->diffInSeconds($shiftStart));
                             if ($diffWithShiftStart < $minDiffForClockIn) {
                                 $minDiffForClockIn = $diffWithShiftStart;
-                                $clockInRecord     = $attendance;
+                                $clockInRecord = $attendance;
                             }
                         }
                         // Check for clock out (setelah mid-shift)
@@ -123,7 +129,7 @@ class ProcessAttendance extends Command
                             $diffWithShiftEnd = abs($attendanceTime->diffInSeconds($shiftEnd));
                             if ($diffWithShiftEnd < $minDiffForClockOut) {
                                 $minDiffForClockOut = $diffWithShiftEnd;
-                                $clockOutRecord     = $attendance;
+                                $clockOutRecord = $attendance;
                             }
                         }
                     }
@@ -143,11 +149,11 @@ class ProcessAttendance extends Command
                     }
 
                     // Calculate metrics
-                    $workHours     = 0;
-                    $lateMinutes   = 0;
+                    $workHours = 0;
+                    $lateMinutes = 0;
                     $overtimeHours = 0;
-                    $clockInTime   = null;
-                    $clockOutTime  = null;
+                    $clockInTime = null;
+                    $clockOutTime = null;
 
                     if ($clockInRecord) {
                         $clockInTime = Carbon::parse($clockInRecord->timestamp);
@@ -192,19 +198,19 @@ class ProcessAttendance extends Command
 
                     // Insert summary record
                     DB::table('attendance_summaries')->insert([
-                        'employee_id'    => $employee->id,
-                        'date'           => $date,
-                        'branch_id'      => $employee->branch_id,
-                        'schedule_id'    => $schedule->schedule_id,
-                        'shift_id'       => $schedule->shift_id,
-                        'shift_name'     => $schedule->shift_name,
-                        'clock_in'       => $clockInTime ? $clockInTime->toTimeString() : null,
-                        'clock_out'      => $clockOutTime ? $clockOutTime->toTimeString() : null,
-                        'work_hours'     => $workHours,
-                        'late_minutes'   => $lateMinutes,
+                        'employee_id' => $employee->id,
+                        'date' => $date,
+                        'branch_id' => $employee->branch_id,
+                        'schedule_id' => $schedule->schedule_id,
+                        'shift_id' => $schedule->shift_id,
+                        'shift_name' => $schedule->shift_name,
+                        'clock_in' => $clockInTime ? $clockInTime->toTimeString() : null,
+                        'clock_out' => $clockOutTime ? $clockOutTime->toTimeString() : null,
+                        'work_hours' => $workHours,
+                        'late_minutes' => $lateMinutes,
                         'overtime_hours' => $overtimeHours,
-                        'created_at'     => now(),
-                        'updated_at'     => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
 
                     $this->info("Processed shift {$schedule->shift_name} for NIP {$nip} on {$date}");

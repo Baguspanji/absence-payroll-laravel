@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -17,11 +18,11 @@ class LogIclockRequests
     {
         if (str_starts_with($request->path(), 'iclock') && env('LOG_ICLOCK_REQUESTS', true)) {
             $logData = [
-                'ip'         => $request->ip(),
-                'method'     => $request->method(),
-                'path'       => $request->path(),
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'path' => $request->path(),
                 'user_agent' => $request->userAgent(),
-                'timestamp'  => now()->toDateTimeString(),
+                'timestamp' => now()->toDateTimeString(),
             ];
 
             // Add request data based on method

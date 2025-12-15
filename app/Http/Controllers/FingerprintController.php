@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\Device;
@@ -22,7 +23,7 @@ class FingerprintController extends Controller
 
             if (! $device) {
                 $device = Device::create([
-                    'name'          => 'Unknown Device',
+                    'name' => 'Unknown Device',
                     'serial_number' => $serialNumber,
                 ]);
 
@@ -36,7 +37,7 @@ class FingerprintController extends Controller
 
                     $response = "GET OPTION FROM: $device->serial_number\n";
                     $response .= "Stamp=9999\n";
-                    $response .= "OpStamp=" . time() . "\n";
+                    $response .= 'OpStamp='.time()."\n";
                     // $response .= "ATTLOGStamp=None\n";
                     // $response .= "OPERLOGStamp=9999\n";
                     // $response .= "ATTPHOTOStamp=None\n";
@@ -74,7 +75,7 @@ class FingerprintController extends Controller
 
         $device = Device::where([
             'serial_number' => $serialNumber,
-            'is_active'     => true,
+            'is_active' => true,
         ])->first();
 
         $response = null;
@@ -82,7 +83,7 @@ class FingerprintController extends Controller
             DB::beginTransaction();
 
             if ($device) {
-                $response = "OK";
+                $response = 'OK';
 
                 $command = cache()->get("device_command_{$serialNumber}");
 
@@ -114,11 +115,11 @@ class FingerprintController extends Controller
     public function cData(Request $request)
     {
         $serialNumber = $request->query('SN');
-        $table        = request()->query('table');
+        $table = request()->query('table');
 
         $device = Device::where([
             'serial_number' => $serialNumber,
-            'is_active'     => true,
+            'is_active' => true,
         ])->first();
 
         if ($device && $table == 'ATTLOG') {
@@ -128,31 +129,31 @@ class FingerprintController extends Controller
             $lines = explode("\r\n", $rawData);
 
             foreach ($lines as $line) {
-                if (trim($line) === "" || str_starts_with($line, 'OPLOG')) {
+                if (trim($line) === '' || str_starts_with($line, 'OPLOG')) {
                     continue;
                 }
 
                 $data = explode("\t", $line);
 
                 if (count($data) >= 4) {
-                    $nip         = $data[0];
-                    $timestamp   = $data[1];
+                    $nip = $data[0];
+                    $timestamp = $data[1];
                     $status_scan = $data[3];
 
                     // Cek attendance terakhir karyawan pada hari yang sama
-                    $today          = date('Y-m-d', strtotime($timestamp));
+                    $today = date('Y-m-d', strtotime($timestamp));
                     $lastAttendance = DB::table('attendances')
                         ->where('employee_nip', $nip)
                         ->whereDate('timestamp', $today)
                         ->orderBy('timestamp', 'desc')
                         ->first();
 
-                                       // Tentukan status berdasarkan attendance terakhir
+                    // Tentukan status berdasarkan attendance terakhir
                     $actualStatus = 0; // Default check-in
                     if ($lastAttendance) {
-                        $lastTimestamp    = strtotime($lastAttendance->timestamp);
+                        $lastTimestamp = strtotime($lastAttendance->timestamp);
                         $currentTimestamp = strtotime($timestamp);
-                        $timeDiff         = ($currentTimestamp - $lastTimestamp) / 3600; // Selisih dalam jam
+                        $timeDiff = ($currentTimestamp - $lastTimestamp) / 3600; // Selisih dalam jam
 
                         // Jika selisih kurang dari 1 jam, skip data (kemungkinan duplikasi)
                         if ($timeDiff < 1) {
@@ -165,19 +166,19 @@ class FingerprintController extends Controller
 
                     DB::table('attendances')->insert([
                         'employee_nip' => $nip,
-                        'timestamp'    => $timestamp,
-                        'status_scan'  => $actualStatus, // Gunakan status yang sudah dihitung
-                                                         // 'original_status' => $status_scan,  // Simpan status asli dari mesin
-                        'device_sn'    => $serialNumber,
+                        'timestamp' => $timestamp,
+                        'status_scan' => $actualStatus, // Gunakan status yang sudah dihitung
+                        // 'original_status' => $status_scan,  // Simpan status asli dari mesin
+                        'device_sn' => $serialNumber,
                         'is_processed' => false,
-                        'created_at'   => now(),
-                        'updated_at'   => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
             }
         }
 
-        return $this->getResponse("OK");
+        return $this->getResponse('OK');
     }
 
     private function getResponse($response, $status = 200)

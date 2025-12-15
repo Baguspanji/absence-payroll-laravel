@@ -36,42 +36,44 @@ new class extends Component {
         <h2 class="text-2xl font-bold mb-4">Riwayat Absensi</h2>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">#</th>
-                    <th scope="col" class="px-6 py-3">Nama Pegawai</th>
+    <x-table :headers="['Karyawan', 'Cabang', 'Waktu', 'Device SN']" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
+        maxHeight="540px">
+        @foreach ($requests as $request)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900 whitespace-nowrap">
+                    <div class="flex items-center gap-4">
+                        @if ($request->employee?->image_url)
+                            <img src="{{ $request->employee?->image_url }}" alt="Foto Karyawan"
+                                class="w-10 h-10 rounded object-cover" />
+                        @else
+                            <div class="w-10 h-10 rounded bg-gray-200 flex items-center justify-center text-gray-500">
+                                <flux:icon name="user" class="w-6 h-6" />
+                            </div>
+                        @endif
+                        <div class="flex flex-col items-start">
+                            <span class="font-mono text-green-600">{{ $request->employee_nip }}</span>
+                            <span>{{ $request->employee?->name }}</span>
+                        </div>
+                    </div>
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
                     @can('admin')
-                        <th scope="col" class="px-6 py-3">Cabang</th>
+                        <div class="flex flex-col items-start">
+                            <span class="font-semibold">
+                                {{ $request->employee?->branch?->name }}
+                            </span>
+                        </div>
                     @endcan
-                    <th scope="col" class="px-6 py-3">Waktu</th>
-                    {{-- <th scope="col" class="px-6 py-3">Status Scan</th> --}}
-                    <th scope="col" class="px-6 py-3">Device SN</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="font-mono px-6 py-4">{{ $request->employee_nip }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->employee?->name }}</td>
-                        @can('admin')
-                            <td class="font-mono px-6 py-4">{{ $request->employee?->branch?->name }}</td>
-                        @endcan
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->timestamp }}</td>
-                        {{-- <td class="px-6 py-4">{{ $request->status_scan ? 'Masuk' : 'Pulang' }}</td> --}}
-                        <td class="px-6 py-4">{{ $request->device_sn }}</td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="5" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data riwayat.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+                </x-table.cell>
+                <x-table.cell class="px-6 py-4 font-medium text-gray-900">
+                    {{ $request->timestamp }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->device_sn }}
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">
         {{ $requests->links() }}

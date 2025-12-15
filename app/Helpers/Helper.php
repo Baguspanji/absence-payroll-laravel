@@ -1,6 +1,6 @@
 <?php
 
-if (!function_exists('compressImage')) {
+if (! function_exists('compressImage')) {
     function compressImage($sourcePath, $destinationPath, $quality)
     {
         $info = getimagesize($sourcePath);
@@ -18,6 +18,7 @@ if (!function_exists('compressImage')) {
         // Save the image with specified quality
         imagejpeg($image, $destinationPath, $quality);
         imagedestroy($image); // Free up memory
+
         return true;
     }
 }
