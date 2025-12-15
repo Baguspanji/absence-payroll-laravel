@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Storage;
 new class extends Component {
     use WithPagination, WithFileUploads;
 
+    public $search = '';
+    public $filterBranch = '';
+
     public $isEdit = false;
     public $userId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
@@ -88,11 +91,30 @@ new class extends Component {
      */
     public function with(): array
     {
+        $query = User::query()
+            ->with('employee.branch');
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('email', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('employee', function ($eq) {
+                        $eq->where('name', 'like', '%' . $this->search . '%')
+                            ->orWhere('nip', 'like', '%' . $this->search . '%');
+                    });
+            });
+        }
+
+        // Apply branch filter
+        if ($this->filterBranch) {
+            $query->whereHas('employee', function ($eq) {
+                $eq->where('branch_id', $this->filterBranch);
+            });
+        }
+
         return [
-            'requests' => User::query()
-                ->with('employee.branch') // Eager load relasi employee
-                ->latest()
-                ->paginate(15),
+            'requests' => $query->latest()->paginate(15),
         ];
     }
 
@@ -354,6 +376,22 @@ new class extends Component {
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
             Tambah Pengguna
         </button>
+    </div>
+
+    <div class="flex gap-2 mb-4">
+        <div class="flex-1">
+            <flux:input wire:model.live.debounce.300ms="search"
+                placeholder="Cari nama, NIP, atau email..."
+                icon="magnifying-glass" />
+        </div>
+        <div class="w-64">
+            <flux:select wire:model.live="filterBranch" placeholder="Semua Cabang">
+                <option value="">Semua Cabang</option>
+                @foreach ($branches as $branch)
+                    <option value="{{ $branch['value'] }}">{{ $branch['label'] }}</option>
+                @endforeach
+            </flux:select>
+        </div>
     </div>
 
     <x-table :headers="['Karyawan', 'Cabang', 'Akses', 'Status', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data pengguna." fixedHeader="true"
