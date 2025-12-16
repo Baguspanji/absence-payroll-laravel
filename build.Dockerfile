@@ -1,7 +1,7 @@
 FROM dunglas/frankenphp
 
 RUN install-php-extensions \
-    pcntl bcmath sockets gd exif zip
+    pcntl bcmath sockets gd exif zip pdo_mysql mysqli intl
 # Add other PHP extensions here...
 
 # Install supervisor
