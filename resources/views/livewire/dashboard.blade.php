@@ -15,16 +15,15 @@ new class extends Component {
         $totalShifts = Shift::count();
 
         // Get attendance summaries by month for the current year
-        // Using CAST(strftime('%m', date) AS INTEGER) for SQLite compatibility
         $attendanceByMonth = AttendanceSummary::select(
-            DB::raw("CAST(strftime('%m', date) AS INTEGER) as month"),
+            DB::raw('MONTH(date) as month'),
             DB::raw('COUNT(*) as total_attendances'),
             DB::raw('SUM(work_hours) as total_work_hours'),
             DB::raw('SUM(late_minutes) as total_late_minutes'),
             DB::raw('SUM(overtime_hours) as total_overtime_hours')
         )
         ->whereYear('date', date('Y'))
-        ->groupBy(DB::raw("strftime('%m', date)"))
+        ->groupBy(DB::raw('MONTH(date)'))
         ->orderBy('month')
         ->get();
 
