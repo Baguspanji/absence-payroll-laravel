@@ -68,13 +68,13 @@ new class extends Component {
     <div class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-4 mb-8 -mx-6 px-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Total Cabang -->
-        <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg shadow-md hover:shadow-lg transition-shadow px-6 py-4 border border-blue-200">
+        <div class="bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-blue-600 text-sm font-medium uppercase tracking-wide">Total Cabang</p>
-                    <p class="text-4xl font-bold text-blue-900 mt-3">{{ $totalBranches }}</p>
+                    <p class="text-slate-600 text-xs font-semibold uppercase tracking-widest">Total Cabang</p>
+                    <p class="text-4xl font-bold text-slate-900 mt-2">{{ $totalBranches }}</p>
                 </div>
-                <div class="bg-blue-500 rounded-full p-4">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-3 shadow-sm">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4">
@@ -85,13 +85,13 @@ new class extends Component {
         </div>
 
         <!-- Total Pegawai -->
-        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg shadow-md hover:shadow-lg transition-shadow px-6 py-4 border border-green-200">
+        <div class="bg-gradient-to-br from-slate-50 via-emerald-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-green-600 text-sm font-medium uppercase tracking-wide">Total Pegawai</p>
-                    <p class="text-4xl font-bold text-green-900 mt-3">{{ $totalEmployees }}</p>
+                    <p class="text-slate-600 text-xs font-semibold uppercase tracking-widest">Total Pegawai</p>
+                    <p class="text-4xl font-bold text-slate-900 mt-2">{{ $totalEmployees }}</p>
                 </div>
-                <div class="bg-green-500 rounded-full p-4">
+                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg p-3 shadow-sm">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
@@ -102,13 +102,13 @@ new class extends Component {
         </div>
 
         <!-- Total Shift -->
-        <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg shadow-md hover:shadow-lg transition-shadow px-6 py-4 border border-orange-200">
+        <div class="bg-gradient-to-br from-slate-50 via-amber-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-orange-600 text-sm font-medium uppercase tracking-wide">Total Shift</p>
-                    <p class="text-4xl font-bold text-orange-900 mt-3">{{ $totalShifts }}</p>
+                    <p class="text-slate-600 text-xs font-semibold uppercase tracking-widest">Total Shift</p>
+                    <p class="text-4xl font-bold text-slate-900 mt-2">{{ $totalShifts }}</p>
                 </div>
-                <div class="bg-orange-500 rounded-full p-4">
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg p-3 shadow-sm">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
@@ -119,13 +119,13 @@ new class extends Component {
         </div>
 
         <!-- Total Jabatan -->
-        <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg shadow-md hover:shadow-lg transition-shadow px-6 py-4 border border-purple-200">
+        <div class="bg-gradient-to-br from-slate-50 via-violet-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-purple-600 text-sm font-medium uppercase tracking-wide">Total Jabatan</p>
-                    <p class="text-4xl font-bold text-purple-900 mt-3">{{ $totalPositions }}</p>
+                    <p class="text-slate-600 text-xs font-semibold uppercase tracking-widest">Total Jabatan</p>
+                    <p class="text-4xl font-bold text-slate-900 mt-2">{{ $totalPositions }}</p>
                 </div>
-                <div class="bg-purple-500 rounded-full p-4">
+                <div class="bg-gradient-to-br from-violet-500 to-violet-600 rounded-lg p-3 shadow-sm">
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
@@ -174,8 +174,8 @@ new class extends Component {
                             }, {
                                 label: 'Total Keterlambatan (menit)',
                                 data: @js($lateMinutesData),
-                                backgroundColor: 'rgba(239, 68, 68, 0.5)',
-                                borderColor: 'rgba(239, 68, 68, 1)',
+                                backgroundColor: 'rgba(249, 115, 22, 0.5)',
+                                borderColor: 'rgba(249, 115, 22, 1)',
                                 borderWidth: 1
                             }, {
                                 label: 'Total Lembur (jam)',
@@ -251,22 +251,14 @@ new class extends Component {
                                 backgroundColor: [
                                     'rgba(59, 130, 246, 0.8)',
                                     'rgba(34, 197, 94, 0.8)',
-                                    'rgba(239, 68, 68, 0.8)',
+                                    'rgba(249, 115, 22, 0.8)',
                                     'rgba(168, 85, 247, 0.8)',
-                                    'rgba(251, 146, 60, 0.8)',
-                                    'rgba(236, 72, 153, 0.8)',
-                                    'rgba(14, 165, 233, 0.8)',
-                                    'rgba(99, 102, 241, 0.8)',
                                 ],
                                 borderColor: [
                                     'rgba(59, 130, 246, 1)',
                                     'rgba(34, 197, 94, 1)',
-                                    'rgba(239, 68, 68, 1)',
+                                    'rgba(249, 115, 22, 1)',
                                     'rgba(168, 85, 247, 1)',
-                                    'rgba(251, 146, 60, 1)',
-                                    'rgba(236, 72, 153, 1)',
-                                    'rgba(14, 165, 233, 1)',
-                                    'rgba(99, 102, 241, 1)',
                                 ],
                                 borderWidth: 1
                             }]
@@ -340,22 +332,14 @@ new class extends Component {
                                 backgroundColor: [
                                     'rgba(59, 130, 246, 0.8)',
                                     'rgba(34, 197, 94, 0.8)',
-                                    'rgba(239, 68, 68, 0.8)',
+                                    'rgba(249, 115, 22, 0.8)',
                                     'rgba(168, 85, 247, 0.8)',
-                                    'rgba(251, 146, 60, 0.8)',
-                                    'rgba(236, 72, 153, 0.8)',
-                                    'rgba(14, 165, 233, 0.8)',
-                                    'rgba(99, 102, 241, 0.8)',
                                 ],
                                 borderColor: [
                                     'rgba(59, 130, 246, 1)',
                                     'rgba(34, 197, 94, 1)',
-                                    'rgba(239, 68, 68, 1)',
+                                    'rgba(249, 115, 22, 1)',
                                     'rgba(168, 85, 247, 1)',
-                                    'rgba(251, 146, 60, 1)',
-                                    'rgba(236, 72, 153, 1)',
-                                    'rgba(14, 165, 233, 1)',
-                                    'rgba(99, 102, 241, 1)',
                                 ],
                                 borderWidth: 1
                             }]
