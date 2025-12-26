@@ -8,6 +8,7 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    public $search = '';
     public $selectedMonth;
     public $selectedYear;
     public $years = [];
@@ -27,10 +28,19 @@ new class extends Component {
 
     public function with(): array
     {
-        $payrolls = Payroll::whereYear('period_start', $this->selectedYear)->whereMonth('period_start', $this->selectedMonth)->with('employee')->paginate(15);
+        $query = Payroll::whereYear('period_start', $this->selectedYear)->whereMonth('period_start', $this->selectedMonth)->with('employee.branch');
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->whereHas('employee', function ($eq) {
+                    $eq->where('name', 'like', '%' . $this->search . '%')->orWhere('nip', 'like', '%' . $this->search . '%');
+                });
+            });
+        }
 
         return [
-            'payrolls' => $payrolls,
+            'payrolls' => $query->paginate(15),
         ];
     }
 
@@ -64,57 +74,61 @@ new class extends Component {
 <div class="px-6 py-4">
     <h2 class="text-2xl font-bold mb-6">Laporan Rekap Penggajian</h2>
 
-    <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex items-end space-x-4">
-        <flux:select label="Bulan" wire:model="selectedMonth" placeholder="Pilih Bulan...">
+    <div class="mb-6 flex flex-col md:flex-row items-end gap-4">
+        <div class="w-full md:max-w-[10rem]">
+            <flux:select wire:model="selectedMonth" placeholder="Pilih Bulan...">
             @foreach ($months as $num => $name)
                 <flux:select.option value="{{ $num }}">{{ $name }}</flux:select.option>
             @endforeach
-        </flux:select>
-        <flux:select label="Tahun" wire:model="selectedYear" placeholder="Pilih Tahun...">
+            </flux:select>
+        </div>
+        <div class="w-full md:max-w-[10rem]">
+            <flux:select wire:model="selectedYear" placeholder="Pilih Tahun...">
             @foreach ($years as $year)
                 <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
             @endforeach
-        </flux:select>
+            </flux:select>
+        </div>
+        <div class="flex-1">
+            <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama karyawan atau NIP..."
+                icon="magnifying-glass" />
+        </div>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th class="px-6 py-3">#</th>
-                    <th class="px-6 py-3">Nama Karyawan</th>
-                    <th class="px-6 py-3">Gaji Bersih</th>
-                    <th class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($payrolls as $payroll)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4">{{ $payroll->employee?->nip }}</td>
-                        <td class="px-6 py-4 font-medium">{{ $payroll->employee?->name }}</td>
-                        <td class="px-6 py-4">Rp {{ number_format($payroll->net_salary, 0, ',', '.') }}</td>
-                        <td class="px-6 py-4">
-                            <div class="space-x-1 flex flex-col md:flex-row">
-                                <a href="{{ route('payroll.slip', $payroll->id) }}" target="_blank"
-                                    class="text-xs font-medium px-2 py-1.5 bg-indigo-600 text-white rounded-md cursor-pointer">
-                                    Lihat Slip
-                                </a>
-                                <button type="button"
-                                    class="text-xs font-medium px-2 py-1.5 bg-orange-600 text-white rounded-md cursor-pointer"
-                                    wire:click="payrollDetail({{ $payroll->id }})">
-                                    Lihat Detail
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="text-center py-4">Tidak ada data payroll untuk periode ini.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
+    <x-table :headers="['Karyawan', 'Cabang', 'Gaji Bersih', 'Aksi']" :rows="$payrolls" emptyMessage="Tidak ada data payroll untuk periode ini."
+        fixedHeader="true" maxHeight="540px">
+        @foreach ($payrolls as $payroll)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900 whitespace-nowrap">
+                    <div class="flex items-center gap-4">
+                        <div class="flex flex-col items-start">
+                            <span class="font-mono text-green-600">{{ $payroll->employee?->nip }}</span>
+                            <span>{{ $payroll->employee?->name }}</span>
+                        </div>
+                    </div>
+                </x-table.cell>
+                <x-table.cell>
+                    {{ $payroll->employee?->branch?->name }}
+                </x-table.cell>
+                <x-table.cell class="font-semibold text-green-600">
+                    Rp {{ number_format($payroll->net_salary, 0, ',', '.') }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap w-[15%]">
+                    <x-button-tooltip tooltip="Lihat slip gaji" icon="document-text"
+                        class="text-sm text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                        <a href="{{ route('payroll.slip', $payroll->id) }}" target="_blank"
+                            class="block w-full h-full"></a>
+                    </x-button-tooltip>
+                    <x-button-tooltip tooltip="Lihat detail" icon="eye"
+                        wire:click="payrollDetail({{ $payroll->id }})"
+                        class="text-sm text-orange-600 px-2 py-1 rounded hover:bg-orange-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                    </x-button-tooltip>
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">{{ $payrolls->links() }}</div>
 

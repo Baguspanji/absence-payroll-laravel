@@ -8,21 +8,31 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use WithPagination;
 
+    public $search = '';
     public $isEdit = false;
     public $payrollComponentId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
     public $name = '';
-    #[Rule('required', message: 'Nama harus diisi.')]
+    #[Rule('required', message: 'Tipe harus dipilih.')]
     public $type = '';
     public $isFixed = false;
 
     /**
-     * Mengambil data pengajuan untuk ditampilkan.
+     * Mengambil data komponen gaji untuk ditampilkan.
      */
     public function with(): array
     {
+        $query = PayrollComponent::query();
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%');
+            });
+        }
+
         return [
-            'requests' => PayrollComponent::query()->orderBy('type', 'asc')->latest()->paginate(10),
+            'requests' => $query->orderBy('type', 'asc')->latest()->paginate(10),
         ];
     }
 
@@ -72,76 +82,78 @@ new class extends Component {
         $this->type = '';
         $this->isFixed = false;
     }
+
+    public function create()
+    {
+        $this->resetForm();
+        $this->modal('form-data')->show();
+    }
 }; ?>
 
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Daftar Master Gaji</h2>
         <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
-            x-on:click="$flux.modal('form-data').show(); $wire.resetForm();">
+            wire:click="create">
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
             Tambah Master Gaji
         </button>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama Master</th>
-                    <th scope="col" class="px-6 py-3">Tipe</th>
-                    <th scope="col" class="px-6 py-3">Sifat Tetap</th>
-                    <th scope="col" class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
-                        <td class="px-6 py-4">
-                            {{-- {{ $request->type == 'earning' ? 'Pendapatan' : 'Potongan' }} --}}
-                            @if ($request->type == 'earning')
-                                Pendapatan
-                            @elseif ($request->type == 'deduction')
-                                Potongan
-                            @else
-                                -
-                            @endif
-                        </td>
-                        <td class="px-6 py-4">
-                            {{-- {{ $request->is_fixed ? 'Ya' : 'Tidak' }} --}}
-                            @if ($request->is_fixed)
-                                Tetap
-                            @else
-                                Harian
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 space-x-2">
-                            @if ($request->type == null)
-                                <button type="button"
-                                    class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100">
-                                    <flux:icon name="lock-closed" class="w-4 h-4 inline-block -mt-1" />
-                                    Tidak dapat diedit
-                                </button>
-                            @else
-                                <button wire:click="edit({{ $request->id }})"
-                                    class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
-                                    <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
-                                    Edit
-                                </button>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data master.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="mb-4">
+        <flux:input wire:model.live.debounce.300ms="search"
+            placeholder="Cari nama komponen gaji..."
+            icon="magnifying-glass" />
     </div>
+
+    <x-table :headers="['Nama Master', 'Tipe', 'Sifat Gaji', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data master." fixedHeader="true"
+        maxHeight="540px">
+        @foreach ($requests as $request)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900">
+                    {{ $request->name }}
+                </x-table.cell>
+                <x-table.cell>
+                    @if ($request->type == 'earning')
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Pendapatan
+                        </span>
+                    @elseif ($request->type == 'deduction')
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Potongan
+                        </span>
+                    @else
+                        -
+                    @endif
+                </x-table.cell>
+                <x-table.cell>
+                    @if ($request->is_fixed)
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Tetap
+                        </span>
+                    @else
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Harian
+                        </span>
+                    @endif
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap w-[10%]">
+                    @if ($request->type == null)
+                        <button type="button"
+                            class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-not-allowed"
+                            disabled>
+                            <flux:icon name="lock-closed" class="w-4 h-4 inline-block -mt-1" />
+                        </button>
+                    @else
+                        <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                            class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
+                            iconClass="w-4 h-4 inline-block -mt-1">
+                        </x-button-tooltip>
+                    @endif
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">
         {{ $requests->links() }}

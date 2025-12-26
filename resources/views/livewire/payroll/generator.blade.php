@@ -141,7 +141,7 @@ new class extends Component {
 <div class="px-6 py-4">
     <h2 class="text-2xl font-bold mb-6">Generate Gaji Bulanan</h2>
 
-    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+    <div class="mb-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <flux:select label="Bulan" wire:model="selectedMonth" placeholder="Pilih Bulan...">
                 @foreach ($months as $num => $name)
@@ -163,22 +163,19 @@ new class extends Component {
     @if ($isGenerated)
         <div class="bg-white p-6 rounded-lg shadow-md">
             <h3 class="text-lg font-bold mb-4">Hasil Generate Payroll</h3>
-            <table class="w-full text-sm text-left text-gray-500">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3">Nama Karyawan</th>
-                        <th class="px-6 py-3">Gaji Bersih</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($results as $result)
-                        <tr class="bg-white border-b">
-                            <td class="px-6 py-4 font-medium">{{ $result['employee_name'] }}</td>
-                            <td class="px-6 py-4">Rp {{ number_format($result['net_salary'], 2, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <x-table :headers="['Nama Karyawan', 'Gaji Bersih']" :rows="$results" emptyMessage="Tidak ada hasil payroll." fixedHeader="true"
+                maxHeight="540px">
+                @foreach ($results as $result)
+                    <x-table.row>
+                        <x-table.cell class="font-medium text-gray-900">
+                            {{ $result['employee_name'] }}
+                        </x-table.cell>
+                        <x-table.cell class="font-semibold text-green-600">
+                            Rp {{ number_format($result['net_salary'], 2, ',', '.') }}
+                        </x-table.cell>
+                    </x-table.row>
+                @endforeach
+            </x-table>
         </div>
     @endif
 </div>

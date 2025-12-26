@@ -8,21 +8,34 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use WithPagination;
 
+    public $search = '';
     public $isEdit = false;
     public $shiftId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
     public $name = '';
-    #[Rule('required', message: 'Nama harus diisi.')]
+    #[Rule('required', message: 'Jam masuk harus diisi.')]
     public $clockIn = '';
+    #[Rule('required', message: 'Jam pulang harus diisi.')]
     public $clockOut = '';
 
     /**
-     * Mengambil data pengajuan untuk ditampilkan.
+     * Mengambil data shift untuk ditampilkan.
      */
     public function with(): array
     {
+        $query = Shift::query();
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhere('clock_in', 'like', '%' . $this->search . '%')
+                    ->orWhere('clock_out', 'like', '%' . $this->search . '%');
+            });
+        }
+
         return [
-            'requests' => Shift::query()->latest()->paginate(10),
+            'requests' => $query->latest()->paginate(10),
         ];
     }
 
@@ -72,52 +85,52 @@ new class extends Component {
         $this->clockIn = '';
         $this->clockOut = '';
     }
+
+    public function create()
+    {
+        $this->resetForm();
+        $this->modal('form-data')->show();
+    }
 }; ?>
 
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Daftar Aturan Shift</h2>
         <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
-            x-on:click="$flux.modal('form-data').show(); $wire.resetForm();">
+            wire:click="create">
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
             Tambah Shift
         </button>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama Shift</th>
-                    <th scope="col" class="px-6 py-3">Jam Masuk</th>
-                    <th scope="col" class="px-6 py-3">Jam Pulang</th>
-                    <th scope="col" class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->clock_in }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->clock_out }}</td>
-                        <td class="px-6 py-4 space-x-2">
-                            <button wire:click="edit({{ $request->id }})"
-                                class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100">
-                                <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
-                                Edit
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data shift.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="mb-4">
+        <flux:input wire:model.live.debounce.300ms="search"
+            placeholder="Cari nama atau jam shift..."
+            icon="magnifying-glass" />
     </div>
+
+    <x-table :headers="['Nama Shift', 'Jam Masuk', 'Jam Pulang', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data shift." fixedHeader="true"
+        maxHeight="540px">
+        @foreach ($requests as $request)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900">
+                    {{ $request->name }}
+                </x-table.cell>
+                <x-table.cell class="font-mono">
+                    {{ $request->clock_in }}
+                </x-table.cell>
+                <x-table.cell class="font-mono">
+                    {{ $request->clock_out }}
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap w-[10%]">
+                    <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                        class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                    </x-button-tooltip>
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">
         {{ $requests->links() }}

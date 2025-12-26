@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 new class extends Component {
     use WithPagination;
 
+    public $search = '';
+
     /**
      * Menyetujui sebuah pengajuan cuti.
      */
@@ -27,25 +29,30 @@ new class extends Component {
     }
 
     /**
-     * Mengambil data pengajuan untuk ditampilkan.
+     * Mengambil data pengajuan cuti untuk ditampilkan.
      */
     public function with(): array
     {
+        $query = LeaveRequest::with('employee.branch');
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->whereHas('employee', function ($eq) {
+                    $eq->where('name', 'like', '%' . $this->search . '%')->orWhere('nip', 'like', '%' . $this->search . '%');
+                })->orWhere('reason', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        // Filter by branch for leaders
         if (Auth::user()->role == 'leader') {
-            return [
-                'requests' => LeaveRequest::with('employee')
-                    ->whereHas('employee', function ($q) {
-                        $q->where('branch_id', Auth::user()->employee->branch_id);
-                    })
-                    ->latest()
-                    ->paginate(10),
-            ];
+            $query->whereHas('employee', function ($q) {
+                $q->where('branch_id', Auth::user()->employee->branch_id);
+            });
         }
 
         return [
-            'requests' => LeaveRequest::with('employee.branch') // Eager load relasi employee
-                ->latest()
-                ->paginate(10),
+            'requests' => $query->latest()->paginate(10),
         ];
     }
 }; ?>
@@ -53,65 +60,115 @@ new class extends Component {
 <div class="px-6 py-4">
     <h2 class="text-2xl font-bold mb-4">Persetujuan Cuti & Izin</h2>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">#</th>
-                    <th scope="col" class="px-6 py-3">Nama Karyawan</th>
-                    @can('admin')
-                        <th scope="col" class="px-6 py-3">Cabang</th>
-                    @endcan
-                    <th scope="col" class="px-6 py-3">Tipe</th>
-                    <th scope="col" class="px-6 py-3">Tanggal</th>
-                    <th scope="col" class="px-6 py-3">Alasan</th>
-                    <th scope="col" class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="font-mono px-6 py-4">{{ $request->employee?->nip }}</td>
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->employee->name }}</td>
-                        @can('admin')
-                            <td class="font-mono px-6 py-4">{{ $request->employee?->branch?->name }}</td>
-                        @endcan
-                        <td class="px-6 py-4">{{ $request->leave_type }}</td>
-                        <td class="px-6 py-4">
-                            {{ \Carbon\Carbon::parse($request->start_date)->translatedFormat('d M Y') }} -
-                            {{ \Carbon\Carbon::parse($request->end_date)->translatedFormat('d M Y') }}</td>
-                        <td class="px-6 py-4">{{ $request->reason }}</td>
-                        <td class="px-6 py-4 space-x-2">
-                            @if ($request->status_approval === 'approved')
-                                <span
-                                    class="text-xs font-medium px-2 py-1.5 bg-green-300 text-white rounded-md">Disetujui</span>
-                            @elseif ($request->status_approval === 'rejected')
-                                <span
-                                    class="text-xs font-medium px-2 py-1.5 bg-red-300 text-white rounded-md">Ditolak</span>
-                            @else
-                                <button wire:click="approve({{ $request->id }})"
-                                    wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
-                                    class="text-xs font-medium px-2 py-1.5 bg-green-600 text-white rounded-md cursor-pointer">
-                                    Setujui
-                                </button>
-                                <button wire:click="reject({{ $request->id }})"
-                                    wire:confirm="Anda yakin ingin menolak pengajuan ini?"
-                                    class="text-xs font-medium px-2 py-1.5 bg-red-600 text-white rounded-md cursor-pointer">
-                                    Tolak
-                                </button>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada pengajuan yang perlu disetujui.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="mb-4">
+        <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama karyawan, NIP, atau alasan..."
+            icon="magnifying-glass" />
     </div>
+
+    @can('admin')
+        <x-table :headers="['NIP', 'Nama Karyawan', 'Cabang', 'Tipe', 'Tanggal', 'Alasan', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada pengajuan yang perlu disetujui."
+            fixedHeader="true" maxHeight="540px">
+            @foreach ($requests as $request)
+                <x-table.row>
+                    <x-table.cell class="font-mono">
+                        {{ $request->employee?->nip }}
+                    </x-table.cell>
+                    <x-table.cell class="font-medium text-gray-900">
+                        {{ $request->employee->name }}
+                    </x-table.cell>
+                    <x-table.cell>
+                        {{ $request->employee?->branch?->name }}
+                    </x-table.cell>
+                    <x-table.cell>
+                        {{ $request->leave_type }}
+                    </x-table.cell>
+                    <x-table.cell class="text-sm">
+                        {{ \Carbon\Carbon::parse($request->start_date)->translatedFormat('d M Y') }} -
+                        {{ \Carbon\Carbon::parse($request->end_date)->translatedFormat('d M Y') }}
+                    </x-table.cell>
+                    <x-table.cell>
+                        {{ $request->reason }}
+                    </x-table.cell>
+                    <x-table.cell class="whitespace-nowrap w-[12%]">
+                        @if ($request->status_approval === 'approved')
+                            <span
+                                class="inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                Disetujui
+                            </span>
+                        @elseif ($request->status_approval === 'rejected')
+                            <span
+                                class="inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium bg-red-100 text-red-800">
+                                Ditolak
+                            </span>
+                        @else
+                            <x-button-tooltip tooltip="Setujui pengajuan" icon="check-circle"
+                                wire:click="approve({{ $request->id }})"
+                                wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
+                                class="text-sm text-green-600 px-2 py-1 rounded hover:bg-green-100 cursor-pointer"
+                                iconClass="w-4 h-4 inline-block -mt-1">
+                            </x-button-tooltip>
+                            <x-button-tooltip tooltip="Tolak pengajuan" icon="x-circle"
+                                wire:click="reject({{ $request->id }})"
+                                wire:confirm="Anda yakin ingin menolak pengajuan ini?"
+                                class="text-sm text-red-600 px-2 py-1 rounded hover:bg-red-100 cursor-pointer"
+                                iconClass="w-4 h-4 inline-block -mt-1">
+                            </x-button-tooltip>
+                        @endif
+                    </x-table.cell>
+                </x-table.row>
+            @endforeach
+        </x-table>
+    @else
+        <x-table :headers="['NIP', 'Nama Karyawan', 'Tipe', 'Tanggal', 'Alasan', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada pengajuan yang perlu disetujui."
+            fixedHeader="true" maxHeight="540px">
+            @foreach ($requests as $request)
+                <x-table.row>
+                    <x-table.cell class="font-mono">
+                        {{ $request->employee?->nip }}
+                    </x-table.cell>
+                    <x-table.cell class="font-medium text-gray-900">
+                        {{ $request->employee->name }}
+                    </x-table.cell>
+                    <x-table.cell>
+                        {{ $request->leave_type }}
+                    </x-table.cell>
+                    <x-table.cell class="text-sm">
+                        {{ \Carbon\Carbon::parse($request->start_date)->translatedFormat('d M Y') }} -
+                        {{ \Carbon\Carbon::parse($request->end_date)->translatedFormat('d M Y') }}
+                    </x-table.cell>
+                    <x-table.cell>
+                        {{ $request->reason }}
+                    </x-table.cell>
+                    <x-table.cell class="whitespace-nowrap w-[12%]">
+                        @if ($request->status_approval === 'approved')
+                            <span
+                                class="inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium bg-green-100 text-green-800">
+                                Disetujui
+                            </span>
+                        @elseif ($request->status_approval === 'rejected')
+                            <span
+                                class="inline-flex items-center px-2 py-1.5 rounded-md text-xs font-medium bg-red-100 text-red-800">
+                                Ditolak
+                            </span>
+                        @else
+                            <x-button-tooltip tooltip="Setujui pengajuan" icon="check-circle"
+                                wire:click="approve({{ $request->id }})"
+                                wire:confirm="Anda yakin ingin menyetujui pengajuan ini?"
+                                class="text-sm text-green-600 px-2 py-1 rounded hover:bg-green-100 cursor-pointer"
+                                iconClass="w-4 h-4 inline-block -mt-1">
+                            </x-button-tooltip>
+                            <x-button-tooltip tooltip="Tolak pengajuan" icon="x-circle"
+                                wire:click="reject({{ $request->id }})"
+                                wire:confirm="Anda yakin ingin menolak pengajuan ini?"
+                                class="text-sm text-red-600 px-2 py-1 rounded hover:bg-red-100 cursor-pointer"
+                                iconClass="w-4 h-4 inline-block -mt-1">
+                            </x-button-tooltip>
+                        @endif
+                    </x-table.cell>
+                </x-table.row>
+            @endforeach
+        </x-table>
+    @endcan
 
     <div class="mt-4">
         {{ $requests->links() }}

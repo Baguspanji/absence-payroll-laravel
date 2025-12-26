@@ -10,9 +10,12 @@ new class extends Component {
     use WithPagination;
 
     public $employees;
+    public $branches;
 
     #[Url]
     public $employeeFilter = null;
+    #[Url]
+    public $branchFilter = null;
 
     public function mount()
     {
@@ -24,6 +27,7 @@ new class extends Component {
         }
 
         $this->employees = \App\Models\Employee::select('id', 'name')->get();
+        $this->branches = \App\Models\Branch::select('id', 'name')->get();
     }
 
     /**
@@ -34,7 +38,7 @@ new class extends Component {
         if (Auth::user()->role == 'leader') {
             return [
                 'requests' => AttendanceSummary::query()
-                    ->with('employee')
+                    ->with('employee.branch')
                     ->whereHas('employee', function ($q) {
                         $q->where('branch_id', Auth::user()->employee->branch_id);
                     })
@@ -52,6 +56,9 @@ new class extends Component {
                 ->when($this->employeeFilter, function ($q) {
                     $q->where('employee_id', $this->employeeFilter);
                 })
+                ->when($this->branchFilter, function ($q) {
+                    $q->where('branch_id', $this->branchFilter);
+                })
                 ->latest()
                 ->paginate(10),
         ];
@@ -66,21 +73,47 @@ new class extends Component {
     <!-- Filter Section -->
     <div class="mb-4">
         <form class="flex flex-wrap gap-4 items-end">
-            <!-- Filter By Employee -->
+            <!-- Filter By Branch -->
             <div class="min-w-xs">
-                <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
-                    <flux:select.option value="">Pilih Pegawai</flux:select.option>
-                    @foreach ($employees as $employee)
-                        <flux:select.option value="{{ $employee->id }}" :selected="$employeeFilter == $employee->id">
-                            {{ $employee->name }}
+                <flux:select wire:model.live="branchFilter" placeholder="Filter Cabang...">
+                    <flux:select.option value="">Pilih Cabang</flux:select.option>
+                    @foreach ($branches as $branch)
+                        <flux:select.option value="{{ $branch->id }}" :selected="$branchFilter == $branch->id">
+                            {{ $branch->name }}
                         </flux:select.option>
                     @endforeach
                 </flux:select>
             </div>
+            <!-- Filter By Employee -->
+            @if (Auth::user()->role !== 'leader')
+                <div class="min-w-xs">
+                    <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
+                        <flux:select.option value="">Pilih Pegawai</flux:select.option>
+                        @foreach ($employees as $employee)
+                            <flux:select.option value="{{ $employee->id }}"
+                                :selected="$employeeFilter == $employee->id">
+                                {{ $employee->name }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
         </form>
     </div>
 
-    <x-table :headers="['Pegawai', 'Tanggal', 'Waktu', 'Total Kerja(jam)', 'Telat(menit)', 'Lembur(jam)']" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
+    @php
+        $tableHeaders = [];
+        $tableHeaders[] = 'Pegawai';
+        if (Auth::user()->role !== 'leader') {
+            $tableHeaders[] = 'Cabang';
+        }
+        $tableHeaders[] = 'Tanggal';
+        $tableHeaders[] = 'Total Jam Kerja';
+        $tableHeaders[] = 'Terlambat (menit)';
+        $tableHeaders[] = 'Lembur (jam)';
+    @endphp
+
+    <x-table :headers="$tableHeaders" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
         maxHeight="540px">
         @foreach ($requests as $request)
             <x-table.row>
@@ -103,11 +136,16 @@ new class extends Component {
                         </div>
                     </div>
                 </x-table.cell>
+                @if (Auth::user()->role !== 'leader')
+                    <x-table.cell class="whitespace-nowrap">
+                        {{ $request->employee?->branch?->name }}
+                    </x-table.cell>
+                @endif
                 <x-table.cell class="whitespace-nowrap">
-                    {{ $request->date }}
-                </x-table.cell>
-                <x-table.cell class="whitespace-nowrap">
-                    {{ $request->clock_in }} - {{ $request->clock_out }}
+                    <div class="flex flex-col">
+                        <span class="font-semibold">{{ $request->date }}</span>
+                        <span class="text-sm text-gray-500">{{ $request->clock_in }} - {{ $request->clock_out }}</span>
+                    </div>
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap">
                     {{ $request->work_hours }}

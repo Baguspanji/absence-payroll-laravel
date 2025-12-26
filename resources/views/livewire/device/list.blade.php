@@ -9,11 +9,12 @@ use Livewire\Attributes\Rule;
 new class extends Component {
     use WithPagination;
 
+    public $search = '';
     public $isEdit = false;
     public $deviceId = null;
     #[Rule('required', message: 'Nama harus diisi.')]
     public $name = '';
-    #[Rule('required', message: 'Nama harus diisi.')]
+    #[Rule('required', message: 'Serial number harus diisi.')]
     public $serialNumber = '';
     #[Rule('required', message: 'CMD ID harus diisi.')]
     public $cmdId = '';
@@ -70,12 +71,21 @@ new class extends Component {
     }
 
     /**
-     * Mengambil data pengajuan untuk ditampilkan.
+     * Mengambil data device untuk ditampilkan.
      */
     public function with(): array
     {
+        $query = Device::query();
+
+        // Apply search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('name', 'like', '%' . $this->search . '%')->orWhere('serial_number', 'like', '%' . $this->search . '%');
+            });
+        }
+
         return [
-            'requests' => Device::query()->latest()->paginate(10),
+            'requests' => $query->latest()->paginate(10),
         ];
     }
 
@@ -190,62 +200,54 @@ new class extends Component {
         <h2 class="text-2xl font-bold mb-4">Daftar Device</h2>
     </div>
 
-    <div class="overflow-x-auto shadow-md sm:rounded-lg">
-        <table class="w-full text-sm text-left text-gray-500">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3">Nama Device</th>
-                    <th scope="col" class="px-6 py-3">Serial Number</th>
-                    <th scope="col" class="px-6 py-3">Cabang</th>
-                    <th scope="col" class="px-6 py-3">Terakhir Aktif</th>
-                    <th scope="col" class="px-6 py-3">Status</th>
-                    <th scope="col" class="px-6 py-3">Aksi</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($requests as $request)
-                    <tr class="bg-white border-b hover:bg-gray-50">
-                        <td class="px-6 py-4 font-medium text-gray-900">{{ $request->name }}</td>
-                        <td class="font-mono px-6 py-4">{{ $request->serial_number }}</td>
-                        <td class="px-6 py-4">{{ $request->branch?->name }}</td>
-                        <td class="px-6 py-4">
-                            {{ $request->last_sync_at ? $request->last_sync_at->format('Y-m-d H:i:s') : '-' }}</td>
-                        <td class="px-6 py-4">
-                            @if ($request->is_active)
-                                <span class="text-xs text-white px-2 py-1.5 bg-green-600 rounded-md cursor-pointer"
-                                    wire:click="updateStatus({{ $request->id }})">
-                                    Aktif
-                                </span>
-                            @else
-                                <span class="text-xs text-white px-2 py-1.5 bg-red-400 rounded-md cursor-pointer"
-                                    wire:click="updateStatus({{ $request->id }})">
-                                    Tidak Aktif
-                                </span>
-                            @endif
-                        </td>
-                        <td class="px-6 py-4 space-x-2">
-                            <button wire:click="command({{ $request->id }})"
-                                class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer">
-                                <flux:icon name="square-terminal" class="w-4 h-4 inline-block -mt-1" />
-                                Command
-                            </button>
-                            <button wire:click="edit({{ $request->id }})"
-                                class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer">
-                                <flux:icon name="pencil-square" class="w-4 h-4 inline-block -mt-1" />
-                                Edit
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr class="bg-white border-b">
-                        <td colspan="6" class="px-6 py-4 text-center text-gray-500">
-                            Tidak ada data device.
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+    <div class="mb-4">
+        <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama atau serial number device..."
+            icon="magnifying-glass" />
     </div>
+
+    <x-table :headers="['Nama Device', 'Serial Number', 'Cabang', 'Terakhir Aktif', 'Status', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data device." fixedHeader="true"
+        maxHeight="540px">
+        @foreach ($requests as $request)
+            <x-table.row>
+                <x-table.cell class="font-medium text-gray-900">
+                    {{ $request->name }}
+                </x-table.cell>
+                <x-table.cell class="font-mono">
+                    {{ $request->serial_number }}
+                </x-table.cell>
+                <x-table.cell>
+                    {{ $request->branch?->name }}
+                </x-table.cell>
+                <x-table.cell>
+                    {{ $request->last_sync_at ? $request->last_sync_at->format('Y-m-d H:i:s') : '-' }}
+                </x-table.cell>
+                <x-table.cell>
+                    @if ($request->is_active)
+                        <span class="text-xs text-white px-2 py-1.5 bg-green-600 rounded-md cursor-pointer"
+                            wire:click="updateStatus({{ $request->id }})">
+                            Aktif
+                        </span>
+                    @else
+                        <span class="text-xs text-white px-2 py-1.5 bg-red-400 rounded-md cursor-pointer"
+                            wire:click="updateStatus({{ $request->id }})">
+                            Tidak Aktif
+                        </span>
+                    @endif
+                </x-table.cell>
+                <x-table.cell class="whitespace-nowrap w-[15%]">
+                    <x-button-tooltip tooltip="Kirim perintah" icon="square-terminal"
+                        wire:click="command({{ $request->id }})"
+                        class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                    </x-button-tooltip>
+                    <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                        class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                    </x-button-tooltip>
+                </x-table.cell>
+            </x-table.row>
+        @endforeach
+    </x-table>
 
     <div class="mt-4">
         {{ $requests->links() }}
@@ -255,7 +257,7 @@ new class extends Component {
     <flux:modal name="form-data" class="md:w-96">
         <div class="space-y-4">
             <div>
-                <flux:heading size="lg">{{ $isEdit ? 'Edit Device' : 'Tambah CabanDeviceg' }}</flux:heading>
+                <flux:heading size="lg">{{ $isEdit ? 'Edit Device' : 'Edit Device' }}</flux:heading>
             </div>
 
             <flux:input label="Nama" placeholder="Masukkan Nama" wire:model="name" />

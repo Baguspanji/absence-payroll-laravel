@@ -28,9 +28,9 @@ class DatabaseSeeder extends Seeder
 
         // create employees row
         \App\Models\Employee::create([
-            'nip' => '1',
+            'nip' => '20250001',
             'user_id' => 1,
-            'name' => 'John Doe',
+            'name' => 'Administrator',
             'position' => 'Manager',
             'branch_id' => 1,
         ]);
