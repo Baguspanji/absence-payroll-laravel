@@ -4,6 +4,9 @@ RUN install-php-extensions \
     pcntl bcmath sockets gd exif zip pdo_mysql mysqli intl
 # Add other PHP extensions here...
 
+# Configure PHP to suppress deprecation warnings
+RUN echo "error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT" >> /usr/local/etc/php/conf.d/custom.ini
+
 # Install supervisor
 RUN apt-get update && apt-get install -y supervisor && \
     mkdir -p /var/log/supervisor && \
@@ -26,6 +29,6 @@ RUN composer update --no-dev --no-scripts --no-autoloader --ignore-platform-reqs
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# ENTRYPOINT ["php", "artisan", "octane:frankenphp"]
+# ENTRYPOINT ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8000"]
 
 ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
