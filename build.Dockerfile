@@ -20,7 +20,8 @@ COPY composer.json composer.lock /app/
 COPY . /app
 
 WORKDIR /app
-RUN composer install --no-dev --optimize-autoloader
+RUN composer update --no-dev --no-scripts --no-autoloader --ignore-platform-reqs && \
+    composer dump-autoload --optimize
 
 # Copy supervisor config
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
