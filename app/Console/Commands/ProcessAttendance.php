@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProcessAttendance extends Command
 {
@@ -15,6 +16,7 @@ class ProcessAttendance extends Command
     public function handle()
     {
         $this->info('Memulai proses rekapitulasi absensi...');
+        Log::channel('process-attendance')->info('Memulai proses rekapitulasi absensi...');
 
         $rawAttendances = DB::table('attendances')
             ->where('is_processed', false)
@@ -23,6 +25,7 @@ class ProcessAttendance extends Command
 
         if ($rawAttendances->isEmpty()) {
             $this->info('Tidak ada data absensi baru untuk diproses.');
+            Log::channel('process-attendance')->info('Tidak ada data absensi baru untuk diproses.');
 
             return;
         }
@@ -35,6 +38,7 @@ class ProcessAttendance extends Command
             $employee = DB::table('employees')->where('nip', $nip)->first();
             if (! $employee) {
                 $this->warn("Karyawan dengan NIP {$nip} tidak ditemukan. Melewatkan...");
+                Log::channel('process-attendance')->warning("Karyawan dengan NIP {$nip} tidak ditemukan. Melewatkan...");
 
                 continue;
             }
@@ -56,6 +60,7 @@ class ProcessAttendance extends Command
 
                 if ($schedules->isEmpty()) {
                     $this->warn("Jadwal shift untuk karyawan NIP {$nip} pada tanggal {$date} tidak ditemukan. Melewatkan...");
+                    Log::channel('process-attendance')->warning("Jadwal shift untuk karyawan NIP {$nip} pada tanggal {$date} tidak ditemukan. Melewatkan...");
 
                     continue;
                 }
@@ -214,6 +219,7 @@ class ProcessAttendance extends Command
                     ]);
 
                     $this->info("Processed shift {$schedule->shift_name} for NIP {$nip} on {$date}");
+                    Log::channel('process-attendance')->info("Processed shift {$schedule->shift_name} for NIP {$nip} on {$date}");
                 }
             }
         }
@@ -222,5 +228,6 @@ class ProcessAttendance extends Command
         DB::table('attendances')->whereIn('id', $rawAttendances->pluck('id'))->update(['is_processed' => true]);
 
         $this->info('Proses rekapitulasi absensi selesai.');
+        Log::channel('process-attendance')->info('Proses rekapitulasi absensi selesai.');
     }
 }

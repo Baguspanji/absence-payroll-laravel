@@ -9,8 +9,6 @@ services:
     container_name: absence-payroll
     restart: unless-stopped
     working_dir: /app
-    environment:
-      SERVER_NAME: ":80"
     ports:
       - "8001:8000"
     volumes:

@@ -133,6 +133,13 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
         ],
+
+        'process-attendance' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/process-attendance.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
     ],
 
 ];
