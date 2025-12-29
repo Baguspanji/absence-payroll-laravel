@@ -21,6 +21,7 @@ class AttendanceSummary extends Model
         'work_hours',
         'late_minutes',
         'overtime_hours',
+        'total_attendances',
     ];
 
     public function employee(): BelongsTo
