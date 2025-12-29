@@ -179,7 +179,7 @@ class ProcessAttendance extends Command
                             $workHours = $clockOutTime->copy()->addDay()->diffInMinutes($clockInTime) / 60;
                         }
 
-                        $workHours = round($workHours, 2);
+                        $workHours = abs(round($workHours, 2));
                         $workHours = min($workHours, 8); // Cap at 8 hours per shift
                     }
 
