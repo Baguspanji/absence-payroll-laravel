@@ -191,7 +191,7 @@ class ProcessAttendance extends Command
                             $isOvertimeApproved = DB::table('overtime_requests')
                                 ->where('employee_id', $employee->id)
                                 ->where('date', $date)
-                                ->where('status', 'approved')
+                                ->where('status_approval', 'approved')
                                 ->exists();
 
                             if ($isOvertimeApproved) {
