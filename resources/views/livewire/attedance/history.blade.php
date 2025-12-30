@@ -2,8 +2,12 @@
 
 use Livewire\Volt\Component;
 use App\Models\Attendance;
+use App\Models\Branch;
+use App\Models\Employee;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
+use Livewire\Attributes\Rule;
 
 new class extends Component {
     use WithPagination;
@@ -20,18 +24,92 @@ new class extends Component {
     #[Url]
     public $end_date = null;
 
+    // Form properties
+    public $isEdit = false;
+    public $attendanceId = null;
+
+    #[Rule('required', message: 'Karyawan harus dipilih.')]
+    public $employeeId = '';
+
+    #[Rule('required', message: 'Tanggal dan waktu harus diisi.')]
+    public $timestamp = '';
+
+    public $deviceSn = '';
+
     public function mount()
     {
-        $this->branches = \App\Models\Branch::select('id', 'name')->get();
+        $this->branches = Branch::select('id', 'name')->get();
 
         if (Auth::user()->role == 'leader') {
-            $this->employees = \App\Models\Employee::where('branch_id', Auth::user()->employee->branch_id)
+            $this->employees = Employee::where('branch_id', Auth::user()->employee->branch_id)
                 ->select('id', 'name')
                 ->get();
             return;
         }
 
-        $this->employees = \App\Models\Employee::select('id', 'name')->orderBy('name')->get();
+        $this->employees = Employee::select('id', 'name', 'nip')->orderBy('name')->get();
+    }
+
+    public function create()
+    {
+        $this->resetForm();
+        $this->modal('attendance-form')->show();
+    }
+
+    public function edit(Attendance $attendance)
+    {
+        $this->attendanceId = $attendance->id;
+        $this->isEdit = true;
+
+        $this->employeeId = $attendance->employee_id;
+        $this->timestamp = $attendance->timestamp;
+        $this->deviceSn = $attendance->device_sn;
+
+        $this->modal('attendance-form')->show();
+    }
+
+    public function submit()
+    {
+        $this->validate();
+
+        if (!$this->isEdit) {
+            Attendance::create([
+                'employee_nip' => collect($this->employees)->firstWhere('id', $this->employeeId)->nip,
+                'timestamp' => $this->timestamp,
+                'device_sn' => $this->deviceSn,
+                'status_scan' => '0',
+                'is_processed' => false,
+            ]);
+
+            $this->dispatch('alert-shown', message: 'Data absensi berhasil ditambahkan!', type: 'success');
+        } else {
+            $attendance = Attendance::find($this->attendanceId);
+            $attendance->employee_id = $this->employeeId;
+            $attendance->timestamp = $this->timestamp;
+            $attendance->device_sn = $this->deviceSn;
+            $attendance->save();
+
+            $this->dispatch('alert-shown', message: 'Data absensi berhasil diperbarui!', type: 'success');
+        }
+
+        $this->modal('attendance-form')->close();
+        $this->dispatch('refreshTable');
+    }
+
+    public function resetForm()
+    {
+        $this->attendanceId = null;
+        $this->isEdit = false;
+
+        $this->employeeId = '';
+        $this->timestamp = '';
+        $this->deviceSn = '';
+    }
+
+    #[On('refreshTable')]
+    public function refreshTable()
+    {
+        // Table will refresh automatically via Livewire
     }
 
     /**
@@ -88,6 +166,11 @@ new class extends Component {
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Riwayat Absensi</h2>
+        <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
+            wire:click="create">
+            <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
+            Tambah Absensi
+        </button>
     </div>
 
     <!-- Filter Section -->
@@ -136,6 +219,7 @@ new class extends Component {
         }
         $tableHeaders[] = 'Waktu';
         $tableHeaders[] = 'Device SN';
+        $tableHeaders[] = 'Aksi';
     @endphp
 
     <x-table :headers="$tableHeaders" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
@@ -173,6 +257,14 @@ new class extends Component {
                 <x-table.cell class="whitespace-nowrap">
                     {{ $request->device_sn }}
                 </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    @if ($request->is_processed == false)
+                        <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                            class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
+                            iconClass="w-4 h-4 inline-block -mt-1">
+                        </x-button-tooltip>
+                    @endif
+                </x-table.cell>
             </x-table.row>
         @endforeach
     </x-table>
@@ -180,4 +272,7 @@ new class extends Component {
     <div class="mt-4">
         {{ $requests->links() }}
     </div>
+
+    <!-- Attendance Form Modal -->
+    @include('livewire.attedance.history-form')
 </div>
