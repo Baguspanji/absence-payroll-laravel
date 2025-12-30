@@ -16,11 +16,12 @@ return new class extends Migration
             $table->foreignId('employee_id')->constrained()->onDelete('cascade');
             $table->foreignId('branch_id')->constrained('branches');
             $table->date('date');
-            $table->time('clock_in');
-            $table->time('clock_out');
+            $table->time('clock_in')->nullable();
+            $table->time('clock_out')->nullable();
             $table->decimal('work_hours', 8, 2)->default(0.00);
             $table->integer('late_minutes')->default(0);
             $table->decimal('overtime_hours', 8, 2)->default(0.00);
+            $table->integer('total_attendances')->default(0);
             $table->timestamps();
         });
     }

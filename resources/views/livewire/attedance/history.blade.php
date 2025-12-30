@@ -8,6 +8,32 @@ use Illuminate\Support\Facades\Auth;
 new class extends Component {
     use WithPagination;
 
+    public $employees;
+    public $branches;
+
+    #[Url]
+    public $employeeFilter = null;
+    #[Url]
+    public $branchFilter = null;
+    #[Url]
+    public $start_date = null;
+    #[Url]
+    public $end_date = null;
+
+    public function mount()
+    {
+        $this->branches = \App\Models\Branch::select('id', 'name')->get();
+
+        if (Auth::user()->role == 'leader') {
+            $this->employees = \App\Models\Employee::where('branch_id', Auth::user()->employee->branch_id)
+                ->select('id', 'name')
+                ->get();
+            return;
+        }
+
+        $this->employees = \App\Models\Employee::select('id', 'name')->orderBy('name')->get();
+    }
+
     /**
      * Mengambil data pengajuan untuk ditampilkan.
      */
@@ -20,13 +46,41 @@ new class extends Component {
                     ->whereHas('employee', function ($q) {
                         $q->where('branch_id', Auth::user()->employee->branch_id);
                     })
+                    ->when($this->employeeFilter, function ($q) {
+                        $q->where('employee_id', $this->employeeFilter);
+                    })
+                    ->when($this->start_date, function ($q) {
+                        $q->whereDate('timestamp', '>=', $this->start_date);
+                    })
+                    ->when($this->end_date, function ($q) {
+                        $q->whereDate('timestamp', '<=', $this->end_date);
+                    })
                     ->latest()
                     ->paginate(10),
             ];
         }
 
         return [
-            'requests' => Attendance::query()->with('employee.branch')->latest()->paginate(10),
+            'requests' => Attendance::query()
+                ->with('employee.branch')
+                ->when($this->employeeFilter, function ($q) {
+                    $q->whereHas('employee', function ($q2) {
+                        $q2->where('id', $this->employeeFilter);
+                    });
+                })
+                ->when($this->branchFilter, function ($q) {
+                    $q->whereHas('employee', function ($q2) {
+                        $q2->where('branch_id', $this->branchFilter);
+                    });
+                })
+                ->when($this->start_date, function ($q) {
+                    $q->whereDate('timestamp', '>=', $this->start_date);
+                })
+                ->when($this->end_date, function ($q) {
+                    $q->whereDate('timestamp', '<=', $this->end_date);
+                })
+                ->latest()
+                ->paginate(10),
         ];
     }
 }; ?>
@@ -36,7 +90,55 @@ new class extends Component {
         <h2 class="text-2xl font-bold mb-4">Riwayat Absensi</h2>
     </div>
 
-    <x-table :headers="['Karyawan', 'Cabang', 'Waktu', 'Device SN']" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
+    <!-- Filter Section -->
+    <div class="mb-4">
+        <form class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Filter By Branch -->
+            @if (Auth::user()->role !== 'leader')
+                <div>
+                    <flux:select wire:model.live="branchFilter" placeholder="Filter Cabang...">
+                        <flux:select.option value="">Pilih Cabang</flux:select.option>
+                        @foreach ($branches as $branch)
+                            <flux:select.option value="{{ $branch->id }}" :selected="$branchFilter == $branch->id">
+                                {{ $branch->name }}
+                            </flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
+            <!-- Filter By Employee -->
+            <div>
+                <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
+                    <flux:select.option value="">Pilih Pegawai</flux:select.option>
+                    @foreach ($employees as $employee)
+                        <flux:select.option value="{{ $employee->id }}" :selected="$employeeFilter == $employee->id">
+                            {{ $employee->name }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+            <!-- Filter By Start Date -->
+            <div>
+                <flux:input type="date" wire:model.live="start_date" placeholder="Tanggal Mulai..." />
+            </div>
+            <!-- Filter By End Date -->
+            <div>
+                <flux:input type="date" wire:model.live="end_date" placeholder="Tanggal Akhir..." />
+            </div>
+        </form>
+    </div>
+
+    @php
+        $tableHeaders = [];
+        $tableHeaders[] = 'Karyawan';
+        if (Auth::user()->can('admin')) {
+            $tableHeaders[] = 'Cabang';
+        }
+        $tableHeaders[] = 'Waktu';
+        $tableHeaders[] = 'Device SN';
+    @endphp
+
+    <x-table :headers="$tableHeaders" :rows="$requests" emptyMessage="Tidak ada data riwayat." fixedHeader="true"
         maxHeight="540px">
         @foreach ($requests as $request)
             <x-table.row>
@@ -56,15 +158,15 @@ new class extends Component {
                         </div>
                     </div>
                 </x-table.cell>
-                <x-table.cell class="whitespace-nowrap">
-                    @can('admin')
+                @can('admin')
+                    <x-table.cell class="whitespace-nowrap">
                         <div class="flex flex-col items-start">
                             <span class="font-semibold">
                                 {{ $request->employee?->branch?->name }}
                             </span>
                         </div>
-                    @endcan
-                </x-table.cell>
+                    </x-table.cell>
+                @endcan
                 <x-table.cell class="px-6 py-4 font-medium text-gray-900">
                     {{ $request->timestamp }}
                 </x-table.cell>

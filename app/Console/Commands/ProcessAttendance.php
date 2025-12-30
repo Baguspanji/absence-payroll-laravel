@@ -20,6 +20,10 @@ class ProcessAttendance extends Command
 
         $rawAttendances = DB::table('attendances')
             ->where('is_processed', false)
+                                            // Start Debug
+            // ->where('employee_nip', '20250099') // Skip test entries
+            // ->where('timestamp', 'like', '2025-12-27%') // Skip test entries
+                                            // End Debug
             ->orderBy('timestamp', 'asc')
             ->get();
 
@@ -33,6 +37,7 @@ class ProcessAttendance extends Command
         // Kelompokkan data berdasarkan NIP karyawan
         $attendancesByUser = $rawAttendances->groupBy('employee_nip');
 
+        $summariesToInsert = [];
         foreach ($attendancesByUser as $nip => $attendances) {
             // Cari data karyawan
             $employee = DB::table('employees')->where('nip', $nip)->first();
@@ -53,7 +58,6 @@ class ProcessAttendance extends Command
                 $schedules = DB::table('schedules')
                     ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
                     ->where('schedules.employee_id', $employee->id)
-                    // ->where('schedules.date', $date)
                     ->select('schedules.id as schedule_id', 'shifts.id as shift_id', 'shifts.name as shift_name', 'shifts.clock_in', 'shifts.clock_out')
                     ->orderBy('shifts.clock_in')
                     ->get();
@@ -71,8 +75,35 @@ class ProcessAttendance extends Command
                     continue;
                 }
 
-                // Proses setiap shift
+                // ← NEW: Build shift information with proper boundaries
+                $shiftsInfo = [];
                 foreach ($schedules as $schedule) {
+                    $shiftStart = Carbon::parse($date.' '.$schedule->clock_in);
+                    $shiftEnd = Carbon::parse($date.' '.$schedule->clock_out);
+
+                    // Handle overnight shift
+                    if ($shiftEnd->lt($shiftStart)) {
+                        $shiftEnd->addDay();
+                    }
+
+                    $shiftsInfo[] = [
+                        'schedule' => $schedule,
+                        'start' => $shiftStart,
+                        'end' => $shiftEnd,
+                        'midpoint' => $shiftStart->copy()->addSeconds($shiftEnd->diffInSeconds($shiftStart) / 2),
+                    ];
+                }
+
+                // ← NEW: Assign attendances to shifts intelligently (prevent duplication)
+                $attendanceAssignments = $this->assignAttendancesToShifts($sortedAttendances, $shiftsInfo, $date);
+
+                // Proses setiap shift dengan attendance yang sudah ditetapkan
+                foreach ($shiftsInfo as $shiftInfo) {
+                    $schedule = $shiftInfo['schedule'];
+                    $shiftStart = $shiftInfo['start'];
+                    $shiftEnd = $shiftInfo['end'];
+                    $midShift = $shiftInfo['midpoint'];
+
                     // Check if summary already exists
                     $existingSummary = DB::table('attendance_summaries')
                         ->where('employee_id', $employee->id)
@@ -84,30 +115,12 @@ class ProcessAttendance extends Command
                         continue;
                     }
 
-                    // Parse shift times
-                    $shiftStart = Carbon::parse($date.' '.$schedule->clock_in);
-                    $shiftEnd = Carbon::parse($date.' '.$schedule->clock_out);
-
-                    // Handle overnight shift
-                    if ($shiftEnd->lt($shiftStart)) {
-                        $shiftEnd->addDay();
-                    }
-
-                    $midShift = $shiftStart->copy()->addSeconds($shiftEnd->diffInSeconds($shiftStart) / 2);
-
-                    // Toleransi waktu untuk mencocokkan absensi dengan shift (misal: 3 jam sebelum/sesudah shift)
-                    $shiftWindow = 3 * 60 * 60; // 3 jam dalam detik
-                    $windowStart = $shiftStart->copy()->subSeconds($shiftWindow);
-                    $windowEnd = $shiftEnd->copy()->addSeconds($shiftWindow);
-
-                    // Filter attendances yang masuk dalam window shift ini
-                    $shiftAttendances = $sortedAttendances->filter(function ($attendance) use ($windowStart, $windowEnd) {
-                        $attendanceTime = Carbon::parse($attendance->timestamp);
-
-                        return $attendanceTime->between($windowStart, $windowEnd);
-                    });
+                    // ← NEW: Get assigned attendances for this shift
+                    $shiftAttendances = $attendanceAssignments[$schedule->schedule_id] ?? collect();
 
                     if ($shiftAttendances->isEmpty()) {
+                        Log::channel('process-attendance')->debug("No attendances assigned to shift {$schedule->shift_name} for NIP {$nip} on {$date}");
+
                         continue;
                     }
 
@@ -165,7 +178,7 @@ class ProcessAttendance extends Command
 
                         // Calculate late minutes
                         if ($clockInTime->isAfter($shiftStart->copy()->addMinutes(15))) {
-                            $lateMinutes = $clockInTime->diffInMinutes($shiftStart);
+                            $lateMinutes = max(0, $clockInTime->diffInMinutes($shiftStart));
                         }
                     }
 
@@ -200,8 +213,45 @@ class ProcessAttendance extends Command
                         }
                     }
 
+                    // Jika rowayat absensi hanya 1
+                    if ($clockOutRecord && $shiftAttendances->count() == 1) {
+                        $workHours = 0;
+                        $lateMinutes = 0;
+                        $overtimeHours = 0;
+                    }
+
+                    // Debug logging
+                    // Log::channel('process-attendance')->debug("NIP: {$nip}");
+                    // Log::channel('process-attendance')->debug("Date: {$date}");
+                    // Log::channel('process-attendance')->debug("Shift: {$schedule->shift_name}");
+                    // Log::channel('process-attendance')->debug("Shift Start: {$shiftStart->toDateTimeString()}");
+                    // Log::channel('process-attendance')->debug("Shift End: {$shiftEnd->toDateTimeString()}");
+                    // Log::channel('process-attendance')->debug("Attendances Count: {$shiftAttendances->count()}");
+                    // Log::channel('process-attendance')->debug('Clock In: '.($clockInTime ? $clockInTime->toDateTimeString() : 'null'));
+                    // Log::channel('process-attendance')->debug('Clock Out: '.($clockOutTime ? $clockOutTime->toDateTimeString() : 'null'));
+                    // Log::channel('process-attendance')->debug("Work Hours: {$workHours}");
+                    // Log::channel('process-attendance')->debug("Late Minutes: {$lateMinutes}");
+                    // Log::channel('process-attendance')->debug("Overtime Hours: {$overtimeHours}");
+
                     // Insert summary record
-                    DB::table('attendance_summaries')->insert([
+                    // DB::table('attendance_summaries')->insert([
+                    //     'employee_id' => $employee->id,
+                    //     'date' => $date,
+                    //     'branch_id' => $employee->branch_id,
+                    //     'schedule_id' => $schedule->schedule_id,
+                    //     'shift_id' => $schedule->shift_id,
+                    //     'shift_name' => $schedule->shift_name,
+                    //     'clock_in' => $clockInTime ? $clockInTime->toTimeString() : null,
+                    //     'clock_out' => $clockOutTime ? $clockOutTime->toTimeString() : null,
+                    //     'work_hours' => $workHours,
+                    //     'late_minutes' => $lateMinutes,
+                    //     'overtime_hours' => $overtimeHours,
+                    //     'total_attendances' => $shiftAttendances->count(),
+                    //     'created_at' => now(),
+                    //     'updated_at' => now(),
+                    // ]);
+
+                    $summariesToInsert[] = [
                         'employee_id' => $employee->id,
                         'date' => $date,
                         'branch_id' => $employee->branch_id,
@@ -213,9 +263,10 @@ class ProcessAttendance extends Command
                         'work_hours' => $workHours,
                         'late_minutes' => $lateMinutes,
                         'overtime_hours' => $overtimeHours,
+                        'total_attendances' => $shiftAttendances->count(),
                         'created_at' => now(),
                         'updated_at' => now(),
-                    ]);
+                    ];
 
                     $this->info("Processed shift {$schedule->shift_name} for NIP {$nip} on {$date}");
                     Log::channel('process-attendance')->info("Processed shift {$schedule->shift_name} for NIP {$nip} on {$date}");
@@ -223,10 +274,82 @@ class ProcessAttendance extends Command
             }
         }
 
-        // Mark as processed
-        DB::table('attendances')->whereIn('id', $rawAttendances->pluck('id'))->update(['is_processed' => true]);
+        // Bulk insert summaries and mark as processed in a transaction
+        DB::transaction(function () use ($summariesToInsert, $rawAttendances) {
+            if (! empty($summariesToInsert)) {
+                DB::table('attendance_summaries')->insert($summariesToInsert);
+                Log::channel('process-attendance')->info('Inserted '.\count($summariesToInsert).' attendance summary records.');
+            }
+
+            // Mark as processed
+            DB::table('attendances')
+                ->whereIn('id', $rawAttendances->pluck('id'))
+                ->update(['is_processed' => true]);
+        });
 
         $this->info('Proses rekapitulasi absensi selesai.');
         Log::channel('process-attendance')->info('Proses rekapitulasi absensi selesai.');
+    }
+
+    /**
+     * ← IMPROVED METHOD: Intelligently assign attendances to shifts
+     * For multi-shift days, consolidate all attendances to ONE shift based on:
+     * 1. Which shift has the EARLIEST first attendance
+     * 2. This determines which shift the employee actually started with
+     */
+    private function assignAttendancesToShifts($attendances, $shiftsInfo, $date)
+    {
+        $assignments = [];
+
+        // Initialize empty assignments for each shift
+        foreach ($shiftsInfo as $shiftInfo) {
+            $assignments[$shiftInfo['schedule']->schedule_id] = collect();
+        }
+
+        // If only one shift, assign all attendances to it
+        if (count($shiftsInfo) === 1) {
+            $assignments[$shiftsInfo[0]['schedule']->schedule_id] = $attendances;
+
+            return $assignments;
+        }
+
+        // Multiple shifts: assign based on the EARLIEST attendance
+        // This represents which shift the employee actually worked
+        $firstAttendance = $attendances->sortBy('timestamp')->first();
+        $firstAttendanceTime = Carbon::parse($firstAttendance->timestamp);
+
+        $selectedShift = null;
+        $closestDistance = PHP_INT_MAX;
+
+        // Find which shift this earliest attendance belongs to
+        foreach ($shiftsInfo as $shiftInfo) {
+            $scheduleId = $shiftInfo['schedule']->schedule_id;
+            $shiftStart = $shiftInfo['start'];
+            $shiftEnd = $shiftInfo['end'];
+
+            // Check if attendance falls within shift boundaries (with 1-hour tolerance before start)
+            $windowStart = $shiftStart->copy()->subHours(1);
+            $windowEnd = $shiftEnd->copy()->addMinutes(15);
+
+            if ($firstAttendanceTime->between($windowStart, $windowEnd)) {
+                // Calculate distance to shift start
+                $distance = abs($firstAttendanceTime->diffInSeconds($shiftStart));
+
+                if ($distance < $closestDistance) {
+                    $closestDistance = $distance;
+                    $selectedShift = $scheduleId;
+                }
+            }
+        }
+
+        // Assign all attendances to the selected shift
+        if ($selectedShift !== null) {
+            $assignments[$selectedShift] = $attendances;
+        } else {
+            // Fallback: assign to first shift if no match found
+            $assignments[$shiftsInfo[0]['schedule']->schedule_id] = $attendances;
+        }
+
+        return $assignments;
     }
 }

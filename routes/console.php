@@ -12,4 +12,3 @@ Artisan::command('inspire', function () {
 Schedule::call(function () {
     Artisan::call('app:process-attendance');
 })->dailyAt('02:00');
-

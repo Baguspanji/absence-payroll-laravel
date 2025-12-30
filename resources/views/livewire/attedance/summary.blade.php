@@ -16,9 +16,15 @@ new class extends Component {
     public $employeeFilter = null;
     #[Url]
     public $branchFilter = null;
+    #[Url]
+    public $start_date = null;
+    #[Url]
+    public $end_date = null;
 
     public function mount()
     {
+        $this->branches = \App\Models\Branch::select('id', 'name')->get();
+
         if (Auth::user()->role == 'leader') {
             $this->employees = \App\Models\Employee::where('branch_id', Auth::user()->employee->branch_id)
                 ->select('id', 'name')
@@ -26,8 +32,7 @@ new class extends Component {
             return;
         }
 
-        $this->employees = \App\Models\Employee::select('id', 'name')->get();
-        $this->branches = \App\Models\Branch::select('id', 'name')->get();
+        $this->employees = \App\Models\Employee::select('id', 'name')->orderBy('name')->get();
     }
 
     /**
@@ -45,7 +50,13 @@ new class extends Component {
                     ->when($this->employeeFilter, function ($q) {
                         $q->where('employee_id', $this->employeeFilter);
                     })
-                    ->latest()
+                    ->when($this->start_date, function ($q) {
+                        $q->whereDate('date', '>=', $this->start_date);
+                    })
+                    ->when($this->end_date, function ($q) {
+                        $q->whereDate('date', '<=', $this->end_date);
+                    })
+                    // ->latest()
                     ->paginate(10),
             ];
         }
@@ -58,6 +69,12 @@ new class extends Component {
                 })
                 ->when($this->branchFilter, function ($q) {
                     $q->where('branch_id', $this->branchFilter);
+                })
+                ->when($this->start_date, function ($q) {
+                    $q->whereDate('date', '>=', $this->start_date);
+                })
+                ->when($this->end_date, function ($q) {
+                    $q->whereDate('date', '<=', $this->end_date);
                 })
                 ->latest()
                 ->paginate(10),
@@ -72,33 +89,40 @@ new class extends Component {
 
     <!-- Filter Section -->
     <div class="mb-4">
-        <form class="flex flex-wrap gap-4 items-end">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- Filter By Branch -->
-            <div class="min-w-xs">
-                <flux:select wire:model.live="branchFilter" placeholder="Filter Cabang...">
-                    <flux:select.option value="">Pilih Cabang</flux:select.option>
-                    @foreach ($branches as $branch)
-                        <flux:select.option value="{{ $branch->id }}" :selected="$branchFilter == $branch->id">
-                            {{ $branch->name }}
-                        </flux:select.option>
-                    @endforeach
-                </flux:select>
-            </div>
-            <!-- Filter By Employee -->
             @if (Auth::user()->role !== 'leader')
-                <div class="min-w-xs">
-                    <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
-                        <flux:select.option value="">Pilih Pegawai</flux:select.option>
-                        @foreach ($employees as $employee)
-                            <flux:select.option value="{{ $employee->id }}"
-                                :selected="$employeeFilter == $employee->id">
-                                {{ $employee->name }}
+                <div>
+                    <flux:select wire:model.live="branchFilter" placeholder="Filter Cabang...">
+                        <flux:select.option value="">Pilih Cabang</flux:select.option>
+                        @foreach ($branches as $branch)
+                            <flux:select.option value="{{ $branch->id }}" :selected="$branchFilter == $branch->id">
+                                {{ $branch->name }}
                             </flux:select.option>
                         @endforeach
                     </flux:select>
                 </div>
             @endif
-        </form>
+            <!-- Filter By Employee -->
+            <div>
+                <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
+                    <flux:select.option value="">Pilih Pegawai</flux:select.option>
+                    @foreach ($employees as $employee)
+                        <flux:select.option value="{{ $employee->id }}" :selected="$employeeFilter == $employee->id">
+                            {{ $employee->name }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+            <!-- Filter By Start Date -->
+            <div>
+                <flux:input type="date" wire:model.live="start_date" placeholder="Tanggal Mulai..." />
+            </div>
+            <!-- Filter By End Date -->
+            <div>
+                <flux:input type="date" wire:model.live="end_date" placeholder="Tanggal Akhir..." />
+            </div>
+        </div>
     </div>
 
     @php
@@ -136,19 +160,26 @@ new class extends Component {
                         </div>
                     </div>
                 </x-table.cell>
-                @if (Auth::user()->role !== 'leader')
+                @can('admin')
                     <x-table.cell class="whitespace-nowrap">
-                        {{ $request->employee?->branch?->name }}
+                        <div class="flex flex-col items-start">
+                            <span class="font-semibold">
+                                {{ $request->employee?->branch?->name }}
+                            </span>
+                            <span>{{ $request->shift_name }}</span>
+                        </div>
                     </x-table.cell>
-                @endif
+                @endcan
                 <x-table.cell class="whitespace-nowrap">
                     <div class="flex flex-col">
                         <span class="font-semibold">{{ $request->date }}</span>
-                        <span class="text-sm text-gray-500">{{ $request->clock_in }} - {{ $request->clock_out }}</span>
+                        <span class="text-sm text-gray-500">{{ $request->clock_in }} -
+                            {{ $request->clock_out }}</span>
                     </div>
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap">
                     {{ $request->work_hours }}
+                    <span class="font-semibold">({{ $request->total_attendances }}x)</span>
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap">
                     {{ $request->late_minutes }}

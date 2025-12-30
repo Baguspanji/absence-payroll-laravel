@@ -11,7 +11,6 @@ new class extends Component {
     public function with(): array
     {
         $totalBranches = Branch::count();
-        $totalShifts = Shift::count();
         $totalEmployees = Employee::count();
         $totalPositions = Employee::select('position')->distinct()->count('position');
 
@@ -48,7 +47,6 @@ new class extends Component {
         return [
             'totalBranches' => $totalBranches,
             'totalEmployees' => $totalEmployees,
-            'totalShifts' => $totalShifts,
             'totalPositions' => $totalPositions,
             'months' => $months,
             'chartData' => $chartData,
@@ -66,7 +64,7 @@ new class extends Component {
 <div class="px-6 py-4">
     <!-- Stats Cards - Fixed Position on Scroll -->
     <div class="sticky top-0 z-10 bg-white/95 backdrop-blur-sm py-4 mb-8 -mx-6 px-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Total Cabang -->
         <div class="bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
             <div class="flex items-start justify-between">
@@ -95,23 +93,6 @@ new class extends Component {
                     <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z">
-                        </path>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Total Shift -->
-        <div class="bg-gradient-to-br from-slate-50 via-amber-50 to-slate-50 rounded-xl shadow-sm hover:shadow-md transition-all px-6 py-5 border border-slate-200/50">
-            <div class="flex items-start justify-between">
-                <div>
-                    <p class="text-slate-600 text-xs font-semibold uppercase tracking-widest">Total Shift</p>
-                    <p class="text-4xl font-bold text-slate-900 mt-2">{{ $totalShifts }}</p>
-                </div>
-                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg p-3 shadow-sm">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z">
                         </path>
                     </svg>
                 </div>
