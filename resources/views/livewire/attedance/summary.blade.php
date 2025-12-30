@@ -2,9 +2,14 @@
 
 use Livewire\Volt\Component;
 use App\Models\AttendanceSummary;
+use App\Models\Branch;
+use App\Models\Employee;
+use App\Jobs\ProcessEmployeeAttendanceJob;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Rule;
 
 new class extends Component {
     use WithPagination;
@@ -21,18 +26,91 @@ new class extends Component {
     #[Url]
     public $end_date = null;
 
+    // Reprocess form properties
+    #[Rule('required', message: 'Karyawan harus dipilih.')]
+    public $reprocessEmployeeId = '';
+
+    #[Rule('required', message: 'Tanggal mulai harus diisi.')]
+    public $reprocessStartDate = '';
+
+    #[Rule('required', message: 'Tanggal akhir harus diisi.')]
+    public $reprocessEndDate = '';
+
     public function mount()
     {
-        $this->branches = \App\Models\Branch::select('id', 'name')->get();
+        $this->branches = Branch::select('id', 'name')->get();
 
         if (Auth::user()->role == 'leader') {
-            $this->employees = \App\Models\Employee::where('branch_id', Auth::user()->employee->branch_id)
+            $this->employees = Employee::where('branch_id', Auth::user()->employee->branch_id)
                 ->select('id', 'name')
                 ->get();
             return;
         }
 
-        $this->employees = \App\Models\Employee::select('id', 'name')->orderBy('name')->get();
+        $this->employees = Employee::select('id', 'name')->orderBy('name')->get();
+    }
+
+    public function openReprocessForm()
+    {
+        $this->resetReprocessForm();
+        $this->modal('reprocess-attendance-modal')->show();
+    }
+
+    public function resetReprocessForm()
+    {
+        $this->reprocessEmployeeId = '';
+        $this->reprocessStartDate = '';
+        $this->reprocessEndDate = '';
+    }
+
+    public function reprocessAttendance()
+    {
+        $this->validate(
+            [
+                'reprocessEmployeeId' => 'required',
+                'reprocessStartDate' => 'required|date',
+                'reprocessEndDate' => 'required|date|after_or_equal:reprocessStartDate',
+            ],
+            [
+                'reprocessEmployeeId.required' => 'Karyawan harus dipilih.',
+                'reprocessStartDate.required' => 'Tanggal mulai harus diisi.',
+                'reprocessEndDate.required' => 'Tanggal akhir harus diisi.',
+                'reprocessEndDate.after_or_equal' => 'Tanggal akhir harus sama atau setelah tanggal mulai.',
+            ],
+        );
+
+        $employee = Employee::find($this->reprocessEmployeeId);
+        if (!$employee) {
+            $this->dispatch('alert-shown', message: 'Karyawan tidak ditemukan!', type: 'error');
+            return;
+        }
+
+        // Delete existing summaries for the date range
+        AttendanceSummary::where('employee_id', $this->reprocessEmployeeId)
+            ->whereBetween('date', [$this->reprocessStartDate, $this->reprocessEndDate])
+            ->delete();
+
+        // Mark attendances as not processed so they will be reprocessed
+        $updatedCount = DB::table('attendances')
+            ->where('employee_nip', $employee->nip)
+            ->whereBetween(DB::raw('DATE(timestamp)'), [$this->reprocessStartDate, $this->reprocessEndDate])
+            ->update(['is_processed' => false]);
+
+        // Dispatch job to process attendance
+        ProcessEmployeeAttendanceJob::dispatch(
+            $employee->nip,
+            $this->reprocessStartDate,
+            $this->reprocessEndDate
+        );
+
+        $this->dispatch('alert-shown',
+            message: "Absensi telah dikirim ke antrian untuk diproses! ({$updatedCount} rekam absensi dihapus)",
+            type: 'success'
+        );
+
+        $this->modal('reprocess-attendance-modal')->close();
+        $this->resetReprocessForm();
+        $this->resetPage();
     }
 
     /**
@@ -56,7 +134,7 @@ new class extends Component {
                     ->when($this->end_date, function ($q) {
                         $q->whereDate('date', '<=', $this->end_date);
                     })
-                    // ->latest()
+                    ->orderBy('date', 'desc')
                     ->paginate(10),
             ];
         }
@@ -76,7 +154,7 @@ new class extends Component {
                 ->when($this->end_date, function ($q) {
                     $q->whereDate('date', '<=', $this->end_date);
                 })
-                ->latest()
+                ->orderBy('date', 'desc')
                 ->paginate(10),
         ];
     }
@@ -85,6 +163,11 @@ new class extends Component {
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Rekap Absensi</h2>
+        <button class="text-sm px-2 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 cursor-pointer"
+            wire:click="openReprocessForm">
+            <flux:icon name="arrow-path" class="w-4 h-4 inline-block -mt-1" />
+            Proses Ulang Rekap Absensi
+        </button>
     </div>
 
     <!-- Filter Section -->
@@ -194,4 +277,35 @@ new class extends Component {
     <div class="mt-4">
         {{ $requests->links() }}
     </div>
+
+    <!-- Reprocess Attendance Modal -->
+    <flux:modal name="reprocess-attendance-modal" class="md:w-96">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Proses Ulang Absensi</flux:heading>
+            </div>
+
+            <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="reprocessEmployeeId">
+                <flux:select.option value="">Pilih Karyawan</flux:select.option>
+                @foreach ($employees as $employee)
+                    <flux:select.option value="{{ $employee->id }}">
+                        {{ $employee->nip }} - {{ $employee->name }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:input type="date" label="Tanggal Mulai" placeholder="Pilih Tanggal Mulai"
+                wire:model="reprocessStartDate" />
+
+            <flux:input type="date" label="Tanggal Akhir" placeholder="Pilih Tanggal Akhir"
+                wire:model="reprocessEndDate" />
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button type="button" wire:click="resetReprocessForm" variant="ghost">Batal</flux:button>
+                <flux:button type="button" wire:click="reprocessAttendance" variant="primary">Proses Ulang
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
 </div>
