@@ -8,6 +8,7 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Rule;
+use Livewire\Attributes\Url;
 
 new class extends Component {
     use WithPagination;
