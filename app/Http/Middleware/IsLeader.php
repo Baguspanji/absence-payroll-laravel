@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -16,7 +18,7 @@ class IsLeader
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Auth::check() && (Auth::user()->role === 'admin' || Auth::user()->role === 'leader')) {
+        if (Auth::check() && (Auth::user()?->role === 'admin' || Auth::user()?->role === 'leader')) {
             return $next($request);
         }
 

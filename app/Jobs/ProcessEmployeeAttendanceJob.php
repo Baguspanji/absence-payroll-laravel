@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
 use App\Services\AttendanceProcessingService;
@@ -28,17 +30,21 @@ class ProcessEmployeeAttendanceJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::channel('process-attendance')->info("Starting ProcessEmployeeAttendanceJob for NIP {$this->employeeNip} from {$this->startDate} to {$this->endDate}");
+        Log::channel('process-attendance')->info(
+            "Starting ProcessEmployeeAttendanceJob for NIP {$this->employeeNip} from {$this->startDate} to {$this->endDate}",
+        );
 
-        $service = new AttendanceProcessingService;
+        $service = new AttendanceProcessingService();
         $result = $service->processAttendanceForEmployeeAndDateRange(
             $this->employeeNip,
             $this->startDate,
-            $this->endDate
+            $this->endDate,
         );
 
         if ($result['success']) {
-            Log::channel('process-attendance')->info("ProcessEmployeeAttendanceJob completed successfully: {$result['message']}");
+            Log::channel('process-attendance')->info(
+                "ProcessEmployeeAttendanceJob completed successfully: {$result['message']}",
+            );
         } else {
             Log::channel('process-attendance')->error("ProcessEmployeeAttendanceJob failed: {$result['message']}");
             throw new \Exception("Failed to process attendance: {$result['message']}");

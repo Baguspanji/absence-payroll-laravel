@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Services\AttendanceProcessingService;
@@ -35,14 +37,12 @@ class ProcessAttendance extends Command
         // Group by employee NIP
         $attendancesByNip = $unprocessedAttendances->groupBy('employee_nip');
 
-        $service = new AttendanceProcessingService;
+        $service = new AttendanceProcessingService();
         $totalInserted = 0;
 
         foreach ($attendancesByNip as $nip => $attendances) {
             // Get the date range for this NIP's attendances
-            $dates = $attendances->map(function ($a) {
-                return Carbon::parse($a->timestamp)->format('Y-m-d');
-            })->unique();
+            $dates = $attendances->map(static fn($a) => Carbon::parse($a->timestamp)->format('Y-m-d'))->unique();
 
             $startDate = $dates->min();
             $endDate = $dates->max();
@@ -60,6 +60,8 @@ class ProcessAttendance extends Command
         }
 
         $this->info("Proses rekapitulasi absensi selesai. Total inserted: {$totalInserted}");
-        Log::channel('process-attendance')->info("Proses rekapitulasi absensi selesai. Total inserted: {$totalInserted}");
+        Log::channel('process-attendance')->info(
+            "Proses rekapitulasi absensi selesai. Total inserted: {$totalInserted}",
+        );
     }
 }

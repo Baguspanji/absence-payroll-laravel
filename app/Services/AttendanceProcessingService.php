@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
 use Carbon\Carbon;
@@ -26,7 +28,9 @@ class AttendanceProcessingService
             ->get();
 
         if ($rawAttendances->isEmpty()) {
-            Log::channel('process-attendance')->info("No unprocessed attendances found for NIP {$employeeNip} between {$startDate} and {$endDate}");
+            Log::channel('process-attendance')->info(
+                "No unprocessed attendances found for NIP {$employeeNip} between {$startDate} and {$endDate}",
+            );
 
             return [
                 'success' => true,
@@ -38,7 +42,7 @@ class AttendanceProcessingService
 
         // Find employee
         $employee = DB::table('employees')->where('nip', $employeeNip)->first();
-        if (! $employee) {
+        if (!$employee) {
             Log::channel('process-attendance')->warning("Employee with NIP {$employeeNip} not found");
 
             return [
@@ -50,9 +54,9 @@ class AttendanceProcessingService
         }
 
         // Group by date
-        $attendancesByDate = $rawAttendances->groupBy(function ($item) {
-            return Carbon::parse($item->timestamp)->format('Y-m-d');
-        });
+        $attendancesByDate = $rawAttendances->groupBy(
+            static fn($item) => Carbon::parse($item->timestamp)->format('Y-m-d'),
+        );
 
         $summariesToInsert = [];
         $processedIds = [];
@@ -62,7 +66,13 @@ class AttendanceProcessingService
             $schedules = DB::table('schedules')
                 ->join('shifts', 'schedules.shift_id', '=', 'shifts.id')
                 ->where('schedules.employee_id', $employee->id)
-                ->select('schedules.id as schedule_id', 'shifts.id as shift_id', 'shifts.name as shift_name', 'shifts.clock_in', 'shifts.clock_out')
+                ->select(
+                    'schedules.id as schedule_id',
+                    'shifts.id as shift_id',
+                    'shifts.name as shift_name',
+                    'shifts.clock_in',
+                    'shifts.clock_out',
+                )
                 ->orderBy('shifts.clock_in')
                 ->get();
 
@@ -81,8 +91,8 @@ class AttendanceProcessingService
             // Build shift information with boundaries
             $shiftsInfo = [];
             foreach ($schedules as $schedule) {
-                $shiftStart = Carbon::parse($date.' '.$schedule->clock_in);
-                $shiftEnd = Carbon::parse($date.' '.$schedule->clock_out);
+                $shiftStart = Carbon::parse($date . ' ' . $schedule->clock_in);
+                $shiftEnd = Carbon::parse($date . ' ' . $schedule->clock_out);
 
                 // Handle overnight shift
                 if ($shiftEnd->lt($shiftStart)) {
@@ -122,7 +132,9 @@ class AttendanceProcessingService
                 $shiftAttendances = $attendanceAssignments[$schedule->schedule_id] ?? collect();
 
                 if ($shiftAttendances->isEmpty()) {
-                    Log::channel('process-attendance')->debug("No attendances assigned to shift {$schedule->shift_name} for NIP {$employeeNip} on {$date}");
+                    Log::channel('process-attendance')->debug(
+                        "No attendances assigned to shift {$schedule->shift_name} for NIP {$employeeNip} on {$date}",
+                    );
 
                     continue;
                 }
@@ -155,11 +167,11 @@ class AttendanceProcessingService
                 }
 
                 // Fallback logic
-                if (! $clockInRecord && $shiftAttendances->count() > 0) {
+                if (!$clockInRecord && $shiftAttendances->count() > 0) {
                     $clockInRecord = $shiftAttendances->first();
                 }
 
-                if (! $clockOutRecord && $shiftAttendances->count() > 0) {
+                if (!$clockOutRecord && $shiftAttendances->count() > 0) {
                     $clockOutRecord = $shiftAttendances->last();
 
                     // Avoid duplicate
@@ -239,14 +251,16 @@ class AttendanceProcessingService
                     'updated_at' => now(),
                 ];
 
-                Log::channel('process-attendance')->info("Processed shift {$schedule->shift_name} for NIP {$employeeNip} on {$date}");
+                Log::channel('process-attendance')->info(
+                    "Processed shift {$schedule->shift_name} for NIP {$employeeNip} on {$date}",
+                );
             }
         }
 
         // Bulk insert summaries and mark as processed in transaction
         $insertedCount = 0;
-        DB::transaction(function () use ($summariesToInsert, $rawAttendances, &$insertedCount, &$processedIds) {
-            if (! empty($summariesToInsert)) {
+        DB::transaction(static function () use ($summariesToInsert, $rawAttendances, &$insertedCount, &$processedIds) {
+            if (!empty($summariesToInsert)) {
                 DB::table('attendance_summaries')->insert($summariesToInsert);
                 $insertedCount = count($summariesToInsert);
                 Log::channel('process-attendance')->info("Inserted {$insertedCount} attendance summary records");
@@ -254,9 +268,7 @@ class AttendanceProcessingService
 
             // Mark as processed
             $processedIds = $rawAttendances->pluck('id')->toArray();
-            DB::table('attendances')
-                ->whereIn('id', $processedIds)
-                ->update(['is_processed' => true]);
+            DB::table('attendances')->whereIn('id', $processedIds)->update(['is_processed' => true]);
         });
 
         return [

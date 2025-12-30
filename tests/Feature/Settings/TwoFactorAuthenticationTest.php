@@ -1,11 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\User;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
 
 beforeEach(function () {
-    if (! Features::canManageTwoFactorAuthentication()) {
+    if (!Features::canManageTwoFactorAuthentication()) {
         $this->markTestSkipped('Two-factor authentication is not enabled.');
     }
 
@@ -18,7 +20,8 @@ beforeEach(function () {
 test('two factor settings page can be rendered', function () {
     $user = User::factory()->withoutTwoFactor()->create();
 
-    $this->actingAs($user)
+    $this
+        ->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('two-factor.show'))
         ->assertOk()
@@ -29,8 +32,7 @@ test('two factor settings page can be rendered', function () {
 test('two factor settings page requires password confirmation when enabled', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)
-        ->get(route('two-factor.show'));
+    $response = $this->actingAs($user)->get(route('two-factor.show'));
 
     $response->assertRedirect(route('password.confirm'));
 });
@@ -40,7 +42,8 @@ test('two factor settings page returns forbidden response when two factor is dis
 
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)
+    $response = $this
+        ->actingAs($user)
         ->withSession(['auth.password_confirmed_at' => time()])
         ->get(route('two-factor.show'));
 

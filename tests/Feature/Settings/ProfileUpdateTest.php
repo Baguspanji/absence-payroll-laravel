@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Models\User;
 use Livewire\Volt\Volt;
 
@@ -48,13 +50,9 @@ test('user can delete their account', function () {
 
     $this->actingAs($user);
 
-    $response = Volt::test('settings.delete-user-form')
-        ->set('password', 'password')
-        ->call('deleteUser');
+    $response = Volt::test('settings.delete-user-form')->set('password', 'password')->call('deleteUser');
 
-    $response
-        ->assertHasNoErrors()
-        ->assertRedirect('/');
+    $response->assertHasNoErrors()->assertRedirect('/');
 
     expect($user->fresh())->toBeNull();
     expect(auth()->check())->toBeFalse();
@@ -65,9 +63,7 @@ test('correct password must be provided to delete account', function () {
 
     $this->actingAs($user);
 
-    $response = Volt::test('settings.delete-user-form')
-        ->set('password', 'wrong-password')
-        ->call('deleteUser');
+    $response = Volt::test('settings.delete-user-form')->set('password', 'wrong-password')->call('deleteUser');
 
     $response->assertHasErrors(['password']);
 

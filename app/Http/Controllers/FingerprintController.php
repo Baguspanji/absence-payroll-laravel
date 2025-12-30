@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers;
 
 use App\Models\Device;
@@ -21,7 +23,7 @@ class FingerprintController extends Controller
             DB::beginTransaction();
             $response = null;
 
-            if (! $device) {
+            if (!$device) {
                 $device = Device::create([
                     'name' => 'Unknown Device',
                     'serial_number' => $serialNumber,
@@ -29,7 +31,7 @@ class FingerprintController extends Controller
 
                 Log::info("Device baru terdaftar: {$serialNumber}");
             } else {
-                if (! $device->is_active) {
+                if (!$device->is_active) {
                     $response = null;
                 } else {
                     $device->last_sync_at = now();
@@ -37,7 +39,7 @@ class FingerprintController extends Controller
 
                     $response = "GET OPTION FROM: $device->serial_number\n";
                     $response .= "Stamp=9999\n";
-                    $response .= 'OpStamp='.time()."\n";
+                    $response .= 'OpStamp=' . time() . "\n";
                     // $response .= "ATTLOGStamp=None\n";
                     // $response .= "OPERLOGStamp=9999\n";
                     // $response .= "ATTPHOTOStamp=None\n";

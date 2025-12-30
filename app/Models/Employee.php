@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -45,7 +47,13 @@ class Employee extends Model
 
     public function payrollComponents(): BelongsToMany
     {
-        return $this->belongsToMany(PayrollComponent::class, 'employee_payroll_components', 'employee_id', 'payroll_component_id')
+        return $this
+            ->belongsToMany(
+                PayrollComponent::class,
+                'employee_payroll_components',
+                'employee_id',
+                'payroll_component_id',
+            )
             ->withPivot('amount')
             ->withTimestamps();
     }
@@ -58,8 +66,8 @@ class Employee extends Model
     public function generateNip(): string
     {
         $latestEmployee = self::orderBy('nip', 'desc')->first();
-        $nextNumber = $latestEmployee ? ((int) substr($latestEmployee->nip, -4)) + 1 : 1;
+        $nextNumber = $latestEmployee ? (int) substr($latestEmployee->nip, -4) + 1 : 1;
 
-        return date('Y').str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return date('Y') . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }

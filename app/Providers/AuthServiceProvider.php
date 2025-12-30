@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Providers;
 
 use App\Models\User;
@@ -13,7 +15,6 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
     }
 
     /**
@@ -23,9 +24,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        Gate::define('auth', fn (User $user) => $user !== null);
-        Gate::define('admin', fn (User $user) => $user->role === 'admin');
-        Gate::define('leader', fn (User $user) => $user->role === 'leader');
-        Gate::define('employee', fn (User $user) => $user->role === 'employee');
+        Gate::define('auth', static fn(User $user) => $user !== null);
+        Gate::define('admin', static fn(User $user) => $user->role === 'admin');
+        Gate::define('leader', static fn(User $user) => $user->role === 'leader');
+        Gate::define('employee', static fn(User $user) => $user->role === 'employee');
     }
 }

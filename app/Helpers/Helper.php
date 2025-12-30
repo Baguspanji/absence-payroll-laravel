@@ -1,6 +1,8 @@
 <?php
 
-if (! function_exists('compressImage')) {
+declare(strict_types=1);
+
+if (!function_exists('compressImage')) {
     function compressImage($sourcePath, $destinationPath, $quality)
     {
         $info = getimagesize($sourcePath);
