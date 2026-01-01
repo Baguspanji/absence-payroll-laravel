@@ -36,6 +36,16 @@ new class extends Component {
     #[Rule('required', message: 'Tanggal akhir harus diisi.')]
     public $reprocessEndDate = '';
 
+    // Export PDF form properties
+    #[Rule('required', message: 'Karyawan harus dipilih.')]
+    public $exportEmployeeId = '';
+
+    #[Rule('required', message: 'Tanggal mulai harus diisi.')]
+    public $exportStartDate = '';
+
+    #[Rule('required', message: 'Tanggal akhir harus diisi.')]
+    public $exportEndDate = '';
+
     public function mount()
     {
         $this->branches = Branch::select('id', 'name')->get();
@@ -56,11 +66,24 @@ new class extends Component {
         $this->modal('reprocess-attendance-modal')->show();
     }
 
+    public function openExportForm()
+    {
+        $this->resetExportForm();
+        $this->modal('export-attendance-modal')->show();
+    }
+
     public function resetReprocessForm()
     {
         $this->reprocessEmployeeId = '';
         $this->reprocessStartDate = '';
         $this->reprocessEndDate = '';
+    }
+
+    public function resetExportForm()
+    {
+        $this->exportEmployeeId = '';
+        $this->exportStartDate = '';
+        $this->exportEndDate = '';
     }
 
     public function reprocessAttendance()
@@ -97,20 +120,43 @@ new class extends Component {
             ->update(['is_processed' => false]);
 
         // Dispatch job to process attendance
-        ProcessEmployeeAttendanceJob::dispatch(
-            $employee->nip,
-            $this->reprocessStartDate,
-            $this->reprocessEndDate
-        );
+        ProcessEmployeeAttendanceJob::dispatch($employee->nip, $this->reprocessStartDate, $this->reprocessEndDate);
 
-        $this->dispatch('alert-shown',
-            message: "Absensi telah dikirim ke antrian untuk diproses! ({$updatedCount} rekam absensi dihapus)",
-            type: 'success'
-        );
+        $this->dispatch('alert-shown', message: "Absensi telah dikirim ke antrian untuk diproses! ({$updatedCount} rekam absensi dihapus)", type: 'success');
 
         $this->modal('reprocess-attendance-modal')->close();
         $this->resetReprocessForm();
         $this->resetPage();
+    }
+
+    public function exportPdf()
+    {
+        $this->validate(
+            [
+                'exportEmployeeId' => 'required',
+                'exportStartDate' => 'required|date',
+                'exportEndDate' => 'required|date|after_or_equal:exportStartDate',
+            ],
+            [
+                'exportEmployeeId.required' => 'Karyawan harus dipilih.',
+                'exportStartDate.required' => 'Tanggal mulai harus diisi.',
+                'exportEndDate.required' => 'Tanggal akhir harus diisi.',
+                'exportEndDate.after_or_equal' => 'Tanggal akhir harus sama atau setelah tanggal mulai.',
+            ],
+        );
+
+        $employee = Employee::find($this->exportEmployeeId);
+        if (!$employee) {
+            $this->dispatch('alert-shown', message: 'Karyawan tidak ditemukan!', type: 'error');
+            return;
+        }
+
+        // Redirect to PDF download
+        return redirect()->route('attendance.export-pdf', [
+            'employeeId' => $this->exportEmployeeId,
+            'startDate' => $this->exportStartDate,
+            'endDate' => $this->exportEndDate,
+        ]);
     }
 
     /**
@@ -163,11 +209,18 @@ new class extends Component {
 <div class="px-6 py-4">
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Rekap Absensi</h2>
-        <button class="text-sm px-2 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 cursor-pointer"
-            wire:click="openReprocessForm">
-            <flux:icon name="arrow-path" class="w-4 h-4 inline-block -mt-1" />
-            Proses Ulang Rekap Absensi
-        </button>
+        <div class="flex gap-2">
+            <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
+                wire:click="openExportForm">
+                <flux:icon name="arrow-down-tray" class="w-4 h-4 inline-block -mt-1" />
+                Export PDF
+            </button>
+            <button class="text-sm px-2 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 cursor-pointer"
+                wire:click="openReprocessForm">
+                <flux:icon name="arrow-path" class="w-4 h-4 inline-block -mt-1" />
+                Proses Ulang Rekap Absensi
+            </button>
+        </div>
     </div>
 
     <!-- Filter Section -->
@@ -304,6 +357,38 @@ new class extends Component {
                 <flux:spacer />
                 <flux:button type="button" wire:click="resetReprocessForm" variant="ghost">Batal</flux:button>
                 <flux:button type="button" wire:click="reprocessAttendance" variant="primary">Proses Ulang
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Export Attendance PDF Modal -->
+    <flux:modal name="export-attendance-modal" class="md:w-96">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Export Rekap Absensi PDF</flux:heading>
+            </div>
+
+            <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="exportEmployeeId">
+                <flux:select.option value="">Pilih Karyawan</flux:select.option>
+                @foreach ($employees as $employee)
+                    <flux:select.option value="{{ $employee->id }}">
+                        {{ $employee->nip }} - {{ $employee->name }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:input type="date" label="Tanggal Mulai" placeholder="Pilih Tanggal Mulai"
+                wire:model="exportStartDate" />
+
+            <flux:input type="date" label="Tanggal Akhir" placeholder="Pilih Tanggal Akhir"
+                wire:model="exportEndDate" />
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button type="button" wire:click="resetExportForm" variant="ghost">Batal</flux:button>
+                <flux:button type="button" wire:click="exportPdf" variant="primary">
+                    Download PDF
                 </flux:button>
             </div>
         </div>

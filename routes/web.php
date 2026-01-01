@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FingerprintController;
 use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -61,6 +62,8 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('ajukan-cuti', 'leaves.request-form')->name('leaves.create');
 
     Volt::route('ajukan-lembur', 'overtime.request-form')->name('overtime.create');
+
+    Route::get('/attendance/export-pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.export-pdf');
 });
 
 // Group all iclock routes under the log.iclock middleware

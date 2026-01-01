@@ -77,16 +77,16 @@ new class extends Component {
     <div class="mb-6 flex flex-col md:flex-row items-end gap-4">
         <div class="w-full md:max-w-[10rem]">
             <flux:select wire:model="selectedMonth" placeholder="Pilih Bulan...">
-            @foreach ($months as $num => $name)
-                <flux:select.option value="{{ $num }}">{{ $name }}</flux:select.option>
-            @endforeach
+                @foreach ($months as $num => $name)
+                    <flux:select.option value="{{ $num }}">{{ $name }}</flux:select.option>
+                @endforeach
             </flux:select>
         </div>
         <div class="w-full md:max-w-[10rem]">
             <flux:select wire:model="selectedYear" placeholder="Pilih Tahun...">
-            @foreach ($years as $year)
-                <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
-            @endforeach
+                @foreach ($years as $year)
+                    <flux:select.option value="{{ $year }}">{{ $year }}</flux:select.option>
+                @endforeach
             </flux:select>
         </div>
         <div class="flex-1">
@@ -116,9 +116,7 @@ new class extends Component {
                 <x-table.cell class="whitespace-nowrap w-[15%]">
                     <x-button-tooltip tooltip="Lihat slip gaji" icon="document-text"
                         class="text-sm text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 cursor-pointer"
-                        iconClass="w-4 h-4 inline-block -mt-1">
-                        <a href="{{ route('payroll.slip', $payroll->id) }}" target="_blank"
-                            class="block w-full h-full"></a>
+                        iconClass="w-4 h-4 inline-block -mt-1" href="{{ route('payroll.slip', $payroll->id) }}" target="_blank">
                     </x-button-tooltip>
                     <x-button-tooltip tooltip="Lihat detail" icon="eye"
                         wire:click="payrollDetail({{ $payroll->id }})"

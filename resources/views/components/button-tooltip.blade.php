@@ -7,7 +7,16 @@
 ])
 
 <div class="relative inline-block group">
-    @if($attributes->has('wire:click'))
+    @if($attributes->has('href'))
+        <a
+            {{ $attributes->merge(['class' => 'relative']) }}
+        >
+            @if($icon)
+                <flux:icon :name="$icon" :class="$iconClass" />
+            @endif
+            {{ $slot }}
+        </a>
+    @elseif($attributes->has('wire:click'))
         <button
             {{ $attributes->merge(['class' => 'relative']) }}
             type="button"
