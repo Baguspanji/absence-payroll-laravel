@@ -1,4 +1,4 @@
-FROM dunglas/frankenphp
+FROM dunglas/frankenphp:1-php8.4-alpine
 
 RUN install-php-extensions \
     pcntl bcmath sockets gd exif zip pdo_mysql mysqli intl
@@ -8,9 +8,8 @@ RUN install-php-extensions \
 RUN echo "error_reporting = E_ALL & ~E_DEPRECATED & ~E_STRICT" >> /usr/local/etc/php/conf.d/custom.ini
 
 # Install supervisor
-RUN apt-get update && apt-get install -y supervisor && \
-    mkdir -p /var/log/supervisor && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache supervisor && \
+    mkdir -p /var/log/supervisor
 
 # Add composer dependencies
 RUN curl -sS https://getcomposer.org/installer | php -- \
