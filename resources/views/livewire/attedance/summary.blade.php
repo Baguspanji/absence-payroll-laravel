@@ -241,14 +241,17 @@ new class extends Component {
             @endif
             <!-- Filter By Employee -->
             <div>
-                <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
+                {{-- <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
                     <flux:select.option value="">Pilih Pegawai</flux:select.option>
                     @foreach ($employees as $employee)
                         <flux:select.option value="{{ $employee->id }}" :selected="$employeeFilter == $employee->id">
                             {{ $employee->name }}
                         </flux:select.option>
                     @endforeach
-                </flux:select>
+                </flux:select> --}}
+                <x-select-searchable :items="$employees" modelName="employeeFilter" :modelValue="$employeeFilter"
+                    displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                    searchPlaceholder="Cari Pegawai..." />
             </div>
             <!-- Filter By Start Date -->
             <div>

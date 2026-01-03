@@ -192,14 +192,17 @@ new class extends Component {
             @endif
             <!-- Filter By Employee -->
             <div>
-                <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
+                {{-- <flux:select wire:model.live="employeeFilter" placeholder="Filter Pegawai...">
                     <flux:select.option value="">Pilih Pegawai</flux:select.option>
                     @foreach ($employees as $employee)
                         <flux:select.option value="{{ $employee->id }}" :selected="$employeeFilter == $employee->id">
                             {{ $employee->name }}
                         </flux:select.option>
                     @endforeach
-                </flux:select>
+                </flux:select> --}}
+                <x-select-searchable :items="$employees" modelName="employeeFilter" :modelValue="$employeeFilter"
+                    displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                    searchPlaceholder="Cari Pegawai..." />
             </div>
             <!-- Filter By Start Date -->
             <div>
@@ -260,7 +263,8 @@ new class extends Component {
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap">
                     @if ($request->is_processed == false)
-                        <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                        <x-button-tooltip tooltip="Edit data" icon="pencil-square"
+                            wire:click="edit({{ $request->id }})"
                             class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
                             iconClass="w-4 h-4 inline-block -mt-1">
                         </x-button-tooltip>
