@@ -341,14 +341,17 @@ new class extends Component {
                 <flux:heading size="lg">Proses Ulang Absensi</flux:heading>
             </div>
 
-            <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="reprocessEmployeeId">
+            {{-- <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="reprocessEmployeeId">
                 <flux:select.option value="">Pilih Karyawan</flux:select.option>
                 @foreach ($employees as $employee)
                     <flux:select.option value="{{ $employee->id }}">
                         {{ $employee->nip }} - {{ $employee->name }}
                     </flux:select.option>
                 @endforeach
-            </flux:select>
+            </flux:select> --}}
+            <x-select-searchable :items="$employees" modelName="reprocessEmployeeId" :modelValue="$reprocessEmployeeId"
+                    displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                    searchPlaceholder="Cari Pegawai..." />
 
             <flux:input type="date" label="Tanggal Mulai" placeholder="Pilih Tanggal Mulai"
                 wire:model="reprocessStartDate" />
