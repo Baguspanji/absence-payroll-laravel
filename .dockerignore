@@ -17,6 +17,9 @@ pnpm-debug.log
 yarn-error.log
 build/
 dist/
+docker/build.Dockerfile
+docker/build-web.Dockerfile
+docker/build-scheduler.Dockerfile
 coverage/
 storage/logs/*
 storage/app/*
@@ -30,10 +33,10 @@ vendor/
 Thumbs.db
 docker-compose.override.yaml
 docker-compose.local.yaml
+docker-compose.yaml
+docker-stack.yaml
 README.md
 CHANGELOG.md
 LICENSE
 .gitattributes
 .dockerignore
-Dockerfile
-docker-compose.yaml

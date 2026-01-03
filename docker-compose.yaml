@@ -1,20 +1,35 @@
-version: '3.8'
-
 services:
-  php:
+  app-web:
     build:
       context: .
-      dockerfile: build.Dockerfile
-    image: absence-payroll-php
-    container_name: absence-payroll
+      dockerfile: docker/build-web.Dockerfile
+      # target: web
     restart: unless-stopped
     working_dir: /app
+    environment:
+      - OCTANE_SERVER=frankenphp
+      - OCTANE_HTTPS=false
     ports:
-      - "8001:8000"
+      - "${DOCKER_APP_PORT}:8000"
     volumes:
       - ".:/app"
       - "caddy_data:/data"
       - "caddy_config:/config"
+    networks:
+      - absence_network
+
+  app-scheduler:
+    build:
+      context: .
+      dockerfile: docker/build-scheduler.Dockerfile
+      # target: scheduler
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - OCTANE_SERVER=frankenphp
+      - OCTANE_HTTPS=false
+    volumes:
+      - ".:/app"
     networks:
       - absence_network
 

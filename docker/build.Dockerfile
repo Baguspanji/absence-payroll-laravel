@@ -17,17 +17,4 @@ RUN curl -sS https://getcomposer.org/installer | php -- \
 
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
-COPY composer.json composer.lock /app/
-
-COPY . /app
-
-WORKDIR /app
-RUN composer update --no-dev --no-scripts --no-autoloader --ignore-platform-reqs && \
-    composer dump-autoload --optimize
-
-# Copy supervisor config
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# ENTRYPOINT ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=8000"]
-
-ENTRYPOINT ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+EXPOSE 8000
