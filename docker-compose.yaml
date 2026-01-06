@@ -9,7 +9,11 @@ services:
     environment:
       - OCTANE_SERVER=frankenphp
       - OCTANE_HTTPS=false
-    ports:
+      - OCTANE_WORKERS=4
+      - OCTANE_MAX_REQUESTS=500
+    # deploy:
+    #   replicas: 2 # Adjust the number of replicas as needing load balancing
+    ports: # Do not use port when using replicas with load balancer
       - "${DOCKER_APP_PORT}:8000"
     volumes:
       - ".:/app"
@@ -17,6 +21,12 @@ services:
       - "caddy_config:/config"
     networks:
       - absence_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8000/up || exit 1"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   app-scheduler:
     build:
@@ -32,6 +42,8 @@ services:
       - ".:/app"
     networks:
       - absence_network
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan --version || exit 1"]
 
 volumes:
   caddy_data: null
