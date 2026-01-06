@@ -71,7 +71,13 @@
 
             <div class="space-y-4">
                 <div class="mb-4">
-                    <h3 class="font-bold text-lg text-gray-800 mb-2">Gaji Kerja</h3>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-bold text-lg text-gray-800">Gaji Kerja</h3>
+                        <button type="button" class="text-blue-600 hover:text-blue-800"
+                            x-on:click="$flux.modal('add-payroll-component').show()">
+                            <flux:icon name="plus" class="w-4 h-4 inline-block" /> Tambah Komponen Gaji
+                        </button>
+                    </div>
 
                     <x-table :headers="['Nama Gaji', 'Tipe', 'Jumlah', 'Aksi']" :rows="$payrollComponents"
                         emptyMessage="Tidak ada komponen gaji yang ditetapkan">
@@ -93,13 +99,6 @@
                             </x-table.row>
                         @endforeach
                     </x-table>
-
-                    <div class="mt-4">
-                        <button type="button" class="text-blue-600 hover:text-blue-800"
-                            x-on:click="$flux.modal('add-payroll-component').show()">
-                            <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" /> Tambah Komponen Gaji
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>

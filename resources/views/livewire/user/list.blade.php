@@ -70,6 +70,9 @@ new class extends Component {
     public $effectiveDate = '';
     public $movementNotes = '';
 
+    public $nowBranchId = null;
+    public $nowPosition = null;
+
     public function mount()
     {
         $this->branches = Branch::get()
@@ -107,8 +110,7 @@ new class extends Component {
      */
     public function with(): array
     {
-        $query = User::query()
-            ->with('employee.branch');
+        $query = User::query()->with('employee.branch');
 
         // Apply search filter
         if ($this->search) {
@@ -116,8 +118,7 @@ new class extends Component {
                 $q->where('name', 'like', '%' . $this->search . '%')
                     ->orWhere('email', 'like', '%' . $this->search . '%')
                     ->orWhereHas('employee', function ($eq) {
-                        $eq->where('name', 'like', '%' . $this->search . '%')
-                            ->orWhere('nip', 'like', '%' . $this->search . '%');
+                        $eq->where('name', 'like', '%' . $this->search . '%')->orWhere('nip', 'like', '%' . $this->search . '%');
                     });
             });
         }
@@ -203,7 +204,7 @@ new class extends Component {
         $this->dispatch('alert-shown', message: 'Komponen gaji berhasil dihapus!', type: 'success');
     }
 
-    public function create()
+    public function createEmployee()
     {
         $this->resetForm();
 
@@ -213,7 +214,7 @@ new class extends Component {
         $this->modal('form-data')->show();
     }
 
-    public function detail(User $user)
+    public function detailEmployee(User $user)
     {
         $user->load(['employee.schedules', 'employee.payrollComponents']);
 
@@ -236,7 +237,7 @@ new class extends Component {
         $this->modal('detail-data')->show();
     }
 
-    public function edit(User $user)
+    public function editEmployee(User $user)
     {
         $this->userId = $user->id;
         $this->isEdit = true;
@@ -252,6 +253,9 @@ new class extends Component {
         $this->position = $user->employee?->position;
         $this->branchId = $user->employee?->branch_id;
         $this->shiftIds = $user->employee?->schedules?->pluck('shift_id')->toArray();
+
+        $this->nowBranchId = $user->employee?->branch_id;
+        $this->nowPosition = $user->employee?->position;
 
         $this->modal('form-data')->show();
     }
@@ -275,6 +279,10 @@ new class extends Component {
         $this->employeeHistoryMovementName = $employee->name;
         $this->employeeHistoryMovements = $employee->historyMovements()->latest('effective_date')->get();
         $this->isEditingMovement = false;
+
+        $this->nowBranchId = $employee->branch_id;
+        $this->nowPosition = $employee->position;
+
         $this->resetMovementForm();
 
         $this->modal('employee-history-movement')->show();
@@ -284,6 +292,7 @@ new class extends Component {
     {
         $this->isEditingMovement = false;
         $this->selectedMovementId = null;
+
         $this->resetMovementForm();
     }
 
@@ -309,12 +318,12 @@ new class extends Component {
     public function saveMovement()
     {
         $this->validate([
-            'movementType' => 'required|in:transfer,promotion,demotion,position_change',
+            'movementType' => 'required|in:branch_transfer,position_change',
             'effectiveDate' => 'required|date',
-            'fromBranchId' => 'nullable|required_if:movementType,transfer|exists:branches,id',
-            'toBranchId' => 'nullable|required_if:movementType,transfer|exists:branches,id',
-            'fromPosition' => 'nullable|required_if:movementType,promotion,demotion,position_change|string|max:255',
-            'toPosition' => 'nullable|required_if:movementType,promotion,demotion,position_change|string|max:255',
+            'fromBranchId' => 'nullable|required_if:movementType,branch_transfer|exists:branches,id',
+            'toBranchId' => 'nullable|required_if:movementType,branch_transfer|exists:branches,id',
+            'fromPosition' => 'nullable|required_if:movementType,position_change|string|max:255',
+            'toPosition' => 'nullable|required_if:movementType,position_change|string|max:255',
             'movementNotes' => 'nullable|string|max:1000',
         ]);
 
@@ -352,6 +361,16 @@ new class extends Component {
             $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil ditambahkan!', type: 'success');
         }
 
+        $employeeChange = [];
+        if ($this->movementType == 'branch_transfer' && $this->toBranchId) {
+            $employeeChange['branch_id'] = $this->toBranchId;
+        }
+        if ($this->movementType == 'position_change' && $this->toPosition) {
+            $employeeChange['position'] = $this->toPosition;
+        }
+
+        Employee::find($this->selectedEmployeeId)->update($employeeChange);
+
         // Refresh the list
         $this->openEmployeeHistoryMovement($this->selectedEmployeeId);
     }
@@ -375,6 +394,9 @@ new class extends Component {
         $this->toPosition = '';
         $this->effectiveDate = '';
         $this->movementNotes = '';
+
+        $this->fromPosition = $this->nowPosition;
+        $this->fromBranchId = $this->nowBranchId;
     }
 
     public function openWidrawalModal()
@@ -408,7 +430,7 @@ new class extends Component {
         $this->dispatch('alert-shown', message: 'Status berhasil diperbarui!', type: 'success');
     }
 
-    public function submit()
+    public function submitEmployee()
     {
         $this->validate();
 
@@ -451,6 +473,15 @@ new class extends Component {
                 ]);
             }
 
+            EmployeeHistoryMovement::create([
+                'employee_id' => $employee->id,
+                'movement_type' => 'branch_transfer',
+                'to_branch_id' => $this->branchId,
+                'to_position' => $this->position,
+                'effective_date' => now(),
+                'notes' => 'Pembuatan data pengguna baru.',
+            ]);
+
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil dibuat!', type: 'success');
         } else {
             $user = User::find($this->userId);
@@ -477,6 +508,40 @@ new class extends Component {
                 ]);
             }
 
+            if ($this->nowBranchId != $this->branchId || $this->nowPosition != $this->position) {
+                $historyMovement = [
+                    'employee_id' => $employee->id,
+                    'movement_type' => '',
+                    'from_branch_id' => $this->nowBranchId,
+                    'to_branch_id' => null,
+                    'from_position' => $this->nowPosition,
+                    'to_position' => null,
+                    'effective_date' => now(),
+                    'notes' => '',
+                ];
+
+                if ($this->nowBranchId != $this->branchId) {
+                    $historyMovement['movement_type'] = 'branch_transfer';
+                    $historyMovement['from_branch_id'] = $this->nowBranchId;
+                    $historyMovement['to_branch_id'] = $this->branchId;
+                    // $historyMovement['notes'] .= 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . '. ';
+                }
+                if ($this->nowPosition != $this->position) {
+                    $historyMovement['movement_type'] = 'position_change';
+                    $historyMovement['from_position'] = $this->nowPosition;
+                    $historyMovement['to_position'] = $this->position;
+                    // $historyMovement['notes'] .= 'Perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
+                }
+
+                // if ($this->nowBranchId != $this->branchId && $this->nowPosition != $this->position) {
+                //     $historyMovement['movement_type'] = 'both';
+                //     $historyMovement['notes'] = 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . ' dan perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
+                // }
+
+                EmployeeHistoryMovement::create($historyMovement);
+            }
+
+
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil diperbarui!', type: 'success');
         }
 
@@ -502,7 +567,7 @@ new class extends Component {
     <div class="flex items-center justify-between mb-4">
         <h2 class="text-2xl font-bold mb-4">Daftar Pengguna</h2>
         <button class="text-sm px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 cursor-pointer"
-            wire:click="create">
+            wire:click="createEmployee">
             <flux:icon name="plus" class="w-4 h-4 inline-block -mt-1" />
             Tambah Pengguna
         </button>
@@ -510,8 +575,7 @@ new class extends Component {
 
     <div class="flex gap-2 mb-4">
         <div class="flex-1">
-            <flux:input wire:model.live.debounce.300ms="search"
-                placeholder="Cari nama, NIP, atau email..."
+            <flux:input wire:model.live.debounce.300ms="search" placeholder="Cari nama, NIP, atau email..."
                 icon="magnifying-glass" />
         </div>
         <div class="w-64">
@@ -581,12 +645,12 @@ new class extends Component {
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap w-[10%]">
                     <!-- Detail Employee Button -->
-                    <x-button-tooltip tooltip="Lihat detail" icon="eye" wire:click="detail({{ $request->id }})"
+                    <x-button-tooltip tooltip="Lihat detail" icon="eye" wire:click="detailEmployee({{ $request->id }})"
                         class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>
                     <!-- Edit Employee Button -->
-                    <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
+                    <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="editEmployee({{ $request->id }})"
                         class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>

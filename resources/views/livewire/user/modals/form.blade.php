@@ -45,7 +45,7 @@
 
         <div class="flex md:col-span-2">
             <flux:spacer />
-            <flux:button type="button" wire:click="submit" variant="primary">Simpan</flux:button>
+            <flux:button type="button" wire:click="submitEmployee" variant="primary">Simpan</flux:button>
         </div>
     </div>
 </flux:modal>
