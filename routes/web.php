@@ -13,6 +13,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('dashboard', fn() =>view('dashboard'))->name('dashboard');
+    Route::get('ajax-dashboard-attendance', [AttendanceController::class, 'ajaxDashboardData'])->name('ajax.dashboard.data');
 
     Route::redirect('settings', 'settings/profile');
 
