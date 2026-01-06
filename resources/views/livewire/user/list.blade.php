@@ -4,6 +4,7 @@ use Livewire\Volt\Component;
 use App\Models\User;
 use App\Models\Employee;
 use App\Models\EmployeeSaving;
+use App\Models\EmployeeHistoryMovement;
 use App\Models\Branch;
 use App\Models\Schedule;
 use App\Models\Shift;
@@ -53,6 +54,21 @@ new class extends Component {
     public $optionPayrollComponents = [];
 
     public ?EmployeeSaving $employeeSaving = null;
+
+    public $employeeHistoryMovements = [];
+    public $employeeHistoryMovementName = '';
+    public $selectedEmployeeId = null;
+
+    // Movement form properties
+    public $isEditingMovement = false;
+    public $selectedMovementId = null;
+    public $movementType = '';
+    public $fromBranchId = '';
+    public $toBranchId = '';
+    public $fromPosition = '';
+    public $toPosition = '';
+    public $effectiveDate = '';
+    public $movementNotes = '';
 
     public function mount()
     {
@@ -245,6 +261,120 @@ new class extends Component {
         $this->employeeSaving = EmployeeSaving::with('transactions')->where('employee_id', $user->employee?->id)->first();
 
         $this->modal('employee-saving-data')->show();
+    }
+
+    public function openEmployeeHistoryMovement($employeeId)
+    {
+        $employee = Employee::with('historyMovements.fromBranch', 'historyMovements.toBranch')->find($employeeId);
+
+        if (!$employee) {
+            return;
+        }
+
+        $this->selectedEmployeeId = $employeeId;
+        $this->employeeHistoryMovementName = $employee->name;
+        $this->employeeHistoryMovements = $employee->historyMovements()->latest('effective_date')->get();
+        $this->isEditingMovement = false;
+        $this->resetMovementForm();
+
+        $this->modal('employee-history-movement')->show();
+    }
+
+    public function createMovementForm()
+    {
+        $this->isEditingMovement = false;
+        $this->selectedMovementId = null;
+        $this->resetMovementForm();
+    }
+
+    public function editMovementForm($movementId)
+    {
+        $movement = EmployeeHistoryMovement::find($movementId);
+
+        if (!$movement) {
+            return;
+        }
+
+        $this->isEditingMovement = true;
+        $this->selectedMovementId = $movementId;
+        $this->movementType = $movement->movement_type;
+        $this->fromBranchId = $movement->from_branch_id ?? '';
+        $this->toBranchId = $movement->to_branch_id ?? '';
+        $this->fromPosition = $movement->from_position ?? '';
+        $this->toPosition = $movement->to_position ?? '';
+        $this->effectiveDate = $movement->effective_date?->format('Y-m-d') ?? '';
+        $this->movementNotes = $movement->notes ?? '';
+    }
+
+    public function saveMovement()
+    {
+        $this->validate([
+            'movementType' => 'required|in:transfer,promotion,demotion,position_change',
+            'effectiveDate' => 'required|date',
+            'fromBranchId' => 'nullable|required_if:movementType,transfer|exists:branches,id',
+            'toBranchId' => 'nullable|required_if:movementType,transfer|exists:branches,id',
+            'fromPosition' => 'nullable|required_if:movementType,promotion,demotion,position_change|string|max:255',
+            'toPosition' => 'nullable|required_if:movementType,promotion,demotion,position_change|string|max:255',
+            'movementNotes' => 'nullable|string|max:1000',
+        ]);
+
+        if (!$this->selectedEmployeeId) {
+            return;
+        }
+
+        if ($this->isEditingMovement && $this->selectedMovementId) {
+            // Update existing movement
+            $movement = EmployeeHistoryMovement::find($this->selectedMovementId);
+            $movement->update([
+                'movement_type' => $this->movementType,
+                'from_branch_id' => $this->fromBranchId ?: null,
+                'to_branch_id' => $this->toBranchId ?: null,
+                'from_position' => $this->fromPosition ?: null,
+                'to_position' => $this->toPosition ?: null,
+                'effective_date' => $this->effectiveDate,
+                'notes' => $this->movementNotes ?: null,
+            ]);
+
+            $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil diperbarui!', type: 'success');
+        } else {
+            // Create new movement
+            EmployeeHistoryMovement::create([
+                'employee_id' => $this->selectedEmployeeId,
+                'movement_type' => $this->movementType,
+                'from_branch_id' => $this->fromBranchId ?: null,
+                'to_branch_id' => $this->toBranchId ?: null,
+                'from_position' => $this->fromPosition ?: null,
+                'to_position' => $this->toPosition ?: null,
+                'effective_date' => $this->effectiveDate,
+                'notes' => $this->movementNotes ?: null,
+            ]);
+
+            $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil ditambahkan!', type: 'success');
+        }
+
+        // Refresh the list
+        $this->openEmployeeHistoryMovement($this->selectedEmployeeId);
+    }
+
+    public function deleteMovement($movementId)
+    {
+        EmployeeHistoryMovement::destroy($movementId);
+
+        $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil dihapus!', type: 'success');
+
+        // Refresh the list
+        $this->openEmployeeHistoryMovement($this->selectedEmployeeId);
+    }
+
+    public function resetMovementForm()
+    {
+        $this->movementType = '';
+        $this->fromBranchId = '';
+        $this->toBranchId = '';
+        $this->fromPosition = '';
+        $this->toPosition = '';
+        $this->effectiveDate = '';
+        $this->movementNotes = '';
     }
 
     public function openWidrawalModal()
@@ -450,17 +580,26 @@ new class extends Component {
                     @endif
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap w-[10%]">
+                    <!-- Detail Employee Button -->
                     <x-button-tooltip tooltip="Lihat detail" icon="eye" wire:click="detail({{ $request->id }})"
                         class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>
+                    <!-- Edit Employee Button -->
                     <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="edit({{ $request->id }})"
                         class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>
+                    <!-- Manage Savings Button -->
                     <x-button-tooltip tooltip="Kelola tabungan" icon="banknotes"
                         wire:click="tabungan({{ $request->id }})"
                         class="text-sm text-green-600 px-2 py-1 rounded hover:bg-green-100 cursor-pointer"
+                        iconClass="w-4 h-4 inline-block -mt-1">
+                    </x-button-tooltip>
+                    <!-- History Movement Button -->
+                    <x-button-tooltip tooltip="Riwayat Pergerakan" icon="arrow-trending-up"
+                        wire:click="openEmployeeHistoryMovement({{ $request->employee?->id }})"
+                        class="text-sm text-blue-600 px-2 py-1 rounded hover:bg-blue-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>
                 </x-table.cell>
@@ -477,4 +616,5 @@ new class extends Component {
     @include('livewire.user.modals.payroll-component')
     @include('livewire.user.modals.employee-saving')
     @include('livewire.user.modals.withdrawal')
+    @include('livewire.user.modals.employee-history-movement')
 </div>

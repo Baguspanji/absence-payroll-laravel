@@ -45,6 +45,11 @@ class Employee extends Model
         return $this->hasMany(Schedule::class);
     }
 
+    public function historyMovements()
+    {
+        return $this->hasMany(EmployeeHistoryMovement::class);
+    }
+
     public function payrollComponents(): BelongsToMany
     {
         return $this
