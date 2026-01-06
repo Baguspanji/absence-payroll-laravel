@@ -26,25 +26,40 @@
                                 <div class="flex items-center justify-between mb-3">
                                     @if ($movement->movement_type == 'branch_transfer')
                                         <flux:badge color="blue" size="sm">Mutasi Cabang</flux:badge>
-                                    @else
+                                    @elseif ($movement->movement_type == 'position_change')
                                         <flux:badge color="green" size="sm">Perubahan Jabatan</flux:badge>
+                                    @else
+                                        <flux:badge size="sm">Lainnya</flux:badge>
                                     @endif
-                                    <span class="text-gray-500 text-xs">{{ $movement->effective_date?->translatedFormat('d F Y') ?? '-' }}</span>
+                                    <span
+                                        class="text-gray-500 text-xs">{{ $movement->effective_date?->translatedFormat('d F Y') ?? '-' }}</span>
                                 </div>
 
                                 @if ($movement->from_branch_id && $movement->to_branch_id)
                                     <div class="flex gap-2 items-center text-sm mb-2">
-                                        <span class="text-gray-600"><span class="font-medium">Dari:</span> {{ $movement->fromBranch?->name ?? '-' }}</span>
+                                        <span class="text-gray-600"><span class="font-medium">Dari:</span>
+                                            {{ $movement->fromBranch?->name ?? '-' }}</span>
                                         <flux:icon name="arrow-right" class="w-4 h-4 text-gray-400" />
-                                        <span class="text-gray-600"><span class="font-medium">Ke:</span> {{ $movement->toBranch?->name ?? '-' }}</span>
+                                        <span class="text-gray-600"><span class="font-medium">Ke:</span>
+                                            {{ $movement->toBranch?->name ?? '-' }}</span>
                                     </div>
                                 @endif
 
                                 @if ($movement->from_position && $movement->to_position)
                                     <div class="flex gap-2 items-center text-sm mb-2">
-                                        <span class="text-gray-600"><span class="font-medium">Dari:</span> {{ $movement->from_position }}</span>
+                                        <span class="text-gray-600"><span class="font-medium">Dari:</span>
+                                            {{ $movement->from_position }}</span>
                                         <flux:icon name="arrow-right" class="w-4 h-4 text-gray-400" />
-                                        <span class="text-gray-600"><span class="font-medium">Ke:</span> {{ $movement->to_position }}</span>
+                                        <span class="text-gray-600"><span class="font-medium">Ke:</span>
+                                            {{ $movement->to_position }}</span>
+                                    </div>
+                                @endif
+
+                                @if ($movement->to_position && $movement->to_branch_id)
+                                    <div class="flex gap-2 items-center text-sm mb-2">
+                                        <span class="text-gray-600">{{ $movement->toBranch?->name ?? '-' }}</span>
+                                        <flux:icon name="at-symbol" class="w-4 h-4 text-gray-400" />
+                                        <span class="text-gray-600">{{ $movement->to_position }}</span>
                                     </div>
                                 @endif
 
@@ -55,7 +70,8 @@
                                 <div class="flex items-center justify-between border-t pt-2 text-xs text-gray-500">
                                     <span>{{ $movement->created_at?->translatedFormat('d F Y H:i') ?? '-' }}</span>
                                     @if (!$isEditingMovement)
-                                        <button type="button" wire:click="editMovementForm({{ $movement->id }})" class="text-blue-600 hover:text-blue-800">
+                                        <button type="button" wire:click="editMovementForm({{ $movement->id }})"
+                                            class="text-blue-600 hover:text-blue-800">
                                             <flux:icon name="pencil-square" class="w-4 h-4" />
                                         </button>
                                     @endif

@@ -475,7 +475,7 @@ new class extends Component {
 
             EmployeeHistoryMovement::create([
                 'employee_id' => $employee->id,
-                'movement_type' => 'branch_transfer',
+                'movement_type' => 'both',
                 'to_branch_id' => $this->branchId,
                 'to_position' => $this->position,
                 'effective_date' => now(),
@@ -533,10 +533,10 @@ new class extends Component {
                     // $historyMovement['notes'] .= 'Perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
                 }
 
-                // if ($this->nowBranchId != $this->branchId && $this->nowPosition != $this->position) {
-                //     $historyMovement['movement_type'] = 'both';
-                //     $historyMovement['notes'] = 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . ' dan perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
-                // }
+                if ($this->nowBranchId != $this->branchId && $this->nowPosition != $this->position) {
+                    $historyMovement['movement_type'] = 'both';
+                    // $historyMovement['notes'] = 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . ' dan perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
+                }
 
                 EmployeeHistoryMovement::create($historyMovement);
             }
