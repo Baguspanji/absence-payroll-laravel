@@ -12,7 +12,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Volt::route('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', fn() =>view('dashboard'))->name('dashboard');
 
     Route::redirect('settings', 'settings/profile');
 
