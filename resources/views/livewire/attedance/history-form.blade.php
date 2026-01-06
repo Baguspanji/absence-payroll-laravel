@@ -6,14 +6,17 @@
                 <flux:heading size="lg">{{ $isEdit ? 'Edit Absensi' : 'Tambah Absensi' }}</flux:heading>
             </div>
 
-            <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="employeeId">
+            {{-- <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="employeeId">
                 <flux:select.option value="">Pilih Karyawan</flux:select.option>
                 @foreach ($employees as $employee)
                     <flux:select.option value="{{ $employee->id }}">
                         {{ $employee->nip }} - {{ $employee->name }}
                     </flux:select.option>
                 @endforeach
-            </flux:select>
+            </flux:select> --}}
+            <x-select-searchable :items="$employees" modelName="employeeId" :modelValue="$employeeId"
+                    displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                    searchPlaceholder="Cari Pegawai..." />
 
             <flux:input type="datetime-local" label="Tanggal & Waktu" placeholder="Masukkan Tanggal & Waktu"
                 wire:model="timestamp" />

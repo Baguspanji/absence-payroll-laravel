@@ -78,7 +78,7 @@ new class extends Component {
                 'employee_nip' => collect($this->employees)->firstWhere('id', $this->employeeId)->nip,
                 'timestamp' => $this->timestamp,
                 'device_sn' => $this->deviceSn,
-                'status_scan' => '0',
+                'status_scan' => 'custom',
                 'is_processed' => false,
             ]);
 
@@ -262,7 +262,7 @@ new class extends Component {
                     {{ $request->device_sn }}
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap">
-                    @if ($request->is_processed == false)
+                    @if ($request->status_scan == 'custom' and $request->is_processed == false)
                         <x-button-tooltip tooltip="Edit data" icon="pencil-square"
                             wire:click="edit({{ $request->id }})"
                             class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"

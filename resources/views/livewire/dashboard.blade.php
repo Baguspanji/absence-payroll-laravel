@@ -15,21 +15,23 @@ new class extends Component {
         $totalPositions = Employee::select('position')->distinct()->count('position');
 
         // Get attendance summaries by month for the current year
-        $attendanceByMonth = AttendanceSummary::select(DB::raw('MONTH(date) as month'), DB::raw('COUNT(*) as total_attendances'), DB::raw('SUM(work_hours) as total_work_hours'), DB::raw('SUM(late_minutes) as total_late_minutes'), DB::raw('SUM(overtime_hours) as total_overtime_hours'))->whereYear('date', date('Y'))->groupBy(DB::raw('MONTH(date)'))->orderBy('month')->get();
+        $attendanceByMonth = AttendanceSummary::select(DB::raw('MONTH(date) as month'), DB::raw('COUNT(*) as total_attendances'), DB::raw('SUM(work_hours) as total_work_hours'), DB::raw('COUNT(DISTINCT CASE WHEN late_minutes > 0 THEN employee_id END) as count_late_employees'), DB::raw('COUNT(DISTINCT CASE WHEN overtime_hours > 0 THEN employee_id END) as count_overtime_employees'))
+            ->whereYear('date', date('Y'))->groupBy(DB::raw('MONTH(date)'))->orderBy('month')
+            ->get();
 
         // Format data for chart
         $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         $chartData = [];
-        $workHoursData = [];
+        // $workHoursData = [];
         $lateMinutesData = [];
         $overtimeHoursData = [];
 
         foreach (range(1, 12) as $monthNum) {
             $monthData = $attendanceByMonth->firstWhere('month', $monthNum);
             $chartData[] = $monthData ? $monthData->total_attendances : 0;
-            $workHoursData[] = $monthData ? round($monthData->total_work_hours, 2) : 0;
-            $lateMinutesData[] = $monthData ? round($monthData->total_late_minutes, 2) : 0;
-            $overtimeHoursData[] = $monthData ? round($monthData->total_overtime_hours, 2) : 0;
+            // $workHoursData[] = $monthData ? round($monthData->total_work_hours, 2) : 0;
+            $lateMinutesData[] = $monthData ? $monthData->count_late_employees : 0;
+            $overtimeHoursData[] = $monthData ? $monthData->count_overtime_employees : 0;
         }
 
         // Get employee count per branch
@@ -50,7 +52,7 @@ new class extends Component {
             'totalPositions' => $totalPositions,
             'months' => $months,
             'chartData' => $chartData,
-            'workHoursData' => $workHoursData,
+            // 'workHoursData' => $workHoursData,
             'lateMinutesData' => $lateMinutesData,
             'overtimeHoursData' => $overtimeHoursData,
             'branchNames' => $branchNames,
@@ -146,20 +148,22 @@ new class extends Component {
                                 backgroundColor: 'rgba(59, 130, 246, 0.5)',
                                 borderColor: 'rgba(59, 130, 246, 1)',
                                 borderWidth: 1
-                            }, {
+                            },
+                            {{-- {
                                 label: 'Total Jam Kerja',
                                 data: @js($workHoursData),
                                 backgroundColor: 'rgba(34, 197, 94, 0.5)',
                                 borderColor: 'rgba(34, 197, 94, 1)',
                                 borderWidth: 1
-                            }, {
-                                label: 'Total Keterlambatan (menit)',
+                            },  --}}
+                            {
+                                label: 'Jumlah Pegawai Terlambat',
                                 data: @js($lateMinutesData),
                                 backgroundColor: 'rgba(249, 115, 22, 0.5)',
                                 borderColor: 'rgba(249, 115, 22, 1)',
                                 borderWidth: 1
                             }, {
-                                label: 'Total Lembur (jam)',
+                                label: 'Jumlah Pegawai Lembur',
                                 data: @js($overtimeHoursData),
                                 backgroundColor: 'rgba(168, 85, 247, 0.5)',
                                 borderColor: 'rgba(168, 85, 247, 1)',

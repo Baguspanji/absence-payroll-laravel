@@ -375,14 +375,17 @@ new class extends Component {
                 <flux:heading size="lg">Export Rekap Absensi PDF</flux:heading>
             </div>
 
-            <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="exportEmployeeId">
+            {{-- <flux:select label="Karyawan" placeholder="Pilih Karyawan" wire:model="exportEmployeeId">
                 <flux:select.option value="">Pilih Karyawan</flux:select.option>
                 @foreach ($employees as $employee)
                     <flux:select.option value="{{ $employee->id }}">
                         {{ $employee->nip }} - {{ $employee->name }}
                     </flux:select.option>
                 @endforeach
-            </flux:select>
+            </flux:select> --}}
+            <x-select-searchable :items="$employees" modelName="exportEmployeeId" :modelValue="$exportEmployeeId"
+                displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                searchPlaceholder="Cari Pegawai..." />
 
             <flux:input type="date" label="Tanggal Mulai" placeholder="Pilih Tanggal Mulai"
                 wire:model="exportStartDate" />
