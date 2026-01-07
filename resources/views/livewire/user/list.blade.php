@@ -318,7 +318,7 @@ new class extends Component {
     public function saveMovement()
     {
         $this->validate([
-            'movementType' => 'required|in:branch_transfer,position_change',
+            'movementType' => 'required|in:rotation,promotion,demotion',
             'effectiveDate' => 'required|date',
             'fromBranchId' => 'nullable|required_if:movementType,branch_transfer|exists:branches,id',
             'toBranchId' => 'nullable|required_if:movementType,branch_transfer|exists:branches,id',
@@ -344,6 +344,11 @@ new class extends Component {
                 'notes' => $this->movementNotes ?: null,
             ]);
 
+            Employee::find($this->selectedEmployeeId)->update([
+                'branch_id' => $this->toBranchId ?: $this->nowBranchId,
+                'position' => $this->toPosition ?: $this->nowPosition,
+            ]);
+
             $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil diperbarui!', type: 'success');
         } else {
             // Create new movement
@@ -356,6 +361,11 @@ new class extends Component {
                 'to_position' => $this->toPosition ?: null,
                 'effective_date' => $this->effectiveDate,
                 'notes' => $this->movementNotes ?: null,
+            ]);
+
+            Employee::find($this->selectedEmployeeId)->update([
+                'branch_id' => $this->toBranchId ?: $this->nowBranchId,
+                'position' => $this->toPosition ?: $this->nowPosition,
             ]);
 
             $this->dispatch('alert-shown', message: 'Riwayat pergerakan berhasil ditambahkan!', type: 'success');
@@ -508,38 +518,38 @@ new class extends Component {
                 ]);
             }
 
-            if ($this->nowBranchId != $this->branchId || $this->nowPosition != $this->position) {
-                $historyMovement = [
-                    'employee_id' => $employee->id,
-                    'movement_type' => '',
-                    'from_branch_id' => $this->nowBranchId,
-                    'to_branch_id' => null,
-                    'from_position' => $this->nowPosition,
-                    'to_position' => null,
-                    'effective_date' => now(),
-                    'notes' => '',
-                ];
+            // if ($this->nowBranchId != $this->branchId || $this->nowPosition != $this->position) {
+            //     $historyMovement = [
+            //         'employee_id' => $employee->id,
+            //         'movement_type' => '',
+            //         'from_branch_id' => $this->nowBranchId,
+            //         'to_branch_id' => null,
+            //         'from_position' => $this->nowPosition,
+            //         'to_position' => null,
+            //         'effective_date' => now(),
+            //         'notes' => '',
+            //     ];
 
-                if ($this->nowBranchId != $this->branchId) {
-                    $historyMovement['movement_type'] = 'branch_transfer';
-                    $historyMovement['from_branch_id'] = $this->nowBranchId;
-                    $historyMovement['to_branch_id'] = $this->branchId;
-                    // $historyMovement['notes'] .= 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . '. ';
-                }
-                if ($this->nowPosition != $this->position) {
-                    $historyMovement['movement_type'] = 'position_change';
-                    $historyMovement['from_position'] = $this->nowPosition;
-                    $historyMovement['to_position'] = $this->position;
-                    // $historyMovement['notes'] .= 'Perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
-                }
+            //     if ($this->nowBranchId != $this->branchId) {
+            //         $historyMovement['movement_type'] = 'branch_transfer';
+            //         $historyMovement['from_branch_id'] = $this->nowBranchId;
+            //         $historyMovement['to_branch_id'] = $this->branchId;
+            //         // $historyMovement['notes'] .= 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . '. ';
+            //     }
+            //     if ($this->nowPosition != $this->position) {
+            //         $historyMovement['movement_type'] = 'position_change';
+            //         $historyMovement['from_position'] = $this->nowPosition;
+            //         $historyMovement['to_position'] = $this->position;
+            //         // $historyMovement['notes'] .= 'Perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
+            //     }
 
-                if ($this->nowBranchId != $this->branchId && $this->nowPosition != $this->position) {
-                    $historyMovement['movement_type'] = 'both';
-                    // $historyMovement['notes'] = 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . ' dan perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
-                }
+            //     if ($this->nowBranchId != $this->branchId && $this->nowPosition != $this->position) {
+            //         $historyMovement['movement_type'] = 'both';
+            //         // $historyMovement['notes'] = 'Mutasi cabang dari ' . ($this->nowBranchId ? Branch::find($this->nowBranchId)?->name : 'N/A') . ' ke ' . Branch::find($this->branchId)?->name . ' dan perubahan jabatan dari ' . $this->nowPosition . ' ke ' . $this->position . '. ';
+            //     }
 
-                EmployeeHistoryMovement::create($historyMovement);
-            }
+            //     EmployeeHistoryMovement::create($historyMovement);
+            // }
 
 
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil diperbarui!', type: 'success');

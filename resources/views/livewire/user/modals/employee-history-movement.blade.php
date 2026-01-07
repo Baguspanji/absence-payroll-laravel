@@ -24,12 +24,14 @@
                         @foreach ($employeeHistoryMovements as $movement)
                             <div class="border border-gray-300 p-3 rounded-lg">
                                 <div class="flex items-center justify-between mb-3">
-                                    @if ($movement->movement_type == 'branch_transfer')
-                                        <flux:badge color="blue" size="sm">Mutasi Cabang</flux:badge>
-                                    @elseif ($movement->movement_type == 'position_change')
-                                        <flux:badge color="green" size="sm">Perubahan Jabatan</flux:badge>
+                                    @if ($movement->movement_type == 'rotation')
+                                        <flux:badge color="blue" class="uppercase">Rotasi</flux:badge>
+                                    @elseif ($movement->movement_type == 'promotion')
+                                        <flux:badge color="green" class="uppercase">Promosi</flux:badge>
+                                    @elseif ($movement->movement_type == 'demotion')
+                                        <flux:badge color="red" class="uppercase">Demosi</flux:badge>
                                     @else
-                                        <flux:badge size="sm">Lainnya</flux:badge>
+                                        <flux:badge class="uppercase">-</flux:badge>
                                     @endif
                                     <span
                                         class="text-gray-500 text-xs">{{ $movement->effective_date?->translatedFormat('d F Y') ?? '-' }}</span>
@@ -45,6 +47,12 @@
                                     </div>
                                 @endif
 
+                                @if ($movement->from_branch_id && !$movement->to_branch_id)
+                                    <div class="flex gap-2 items-center text-sm mb-2">
+                                        <span class="text-gray-600">{{ $movement->fromBranch?->name ?? '-' }}</span>
+                                    </div>
+                                @endif
+
                                 @if ($movement->from_position && $movement->to_position)
                                     <div class="flex gap-2 items-center text-sm mb-2">
                                         <span class="text-gray-600"><span class="font-medium">Dari:</span>
@@ -55,7 +63,7 @@
                                     </div>
                                 @endif
 
-                                @if ($movement->to_position && $movement->to_branch_id)
+                                @if ((!$movement->from_position && $movement->to_position) && (!$movement->from_branch_id && $movement->to_branch_id))
                                     <div class="flex gap-2 items-center text-sm mb-2">
                                         <span class="text-gray-600">{{ $movement->toBranch?->name ?? '-' }}</span>
                                         <flux:icon name="at-symbol" class="w-4 h-4 text-gray-400" />
@@ -112,13 +120,14 @@
                     <div>
                         <flux:select wire:model.live="movementType" label="Jenis Pergerakan">
                             <option value="">Pilih Jenis Pergerakan</option>
-                            <option value="branch_transfer">Mutasi Cabang</option>
-                            <option value="position_change">Perubahan Jabatan</option>
+                            <option value="rotation">Rotasi</option>
+                            <option value="promotion">Promosi</option>
+                            <option value="demotion">Demosi</option>
                         </flux:select>
                     </div>
 
                     <!-- Branch Transfer Fields -->
-                    @if ($movementType == 'branch_transfer')
+                    @if (in_array($movementType, ['rotation', 'promotion', 'demotion']))
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -148,7 +157,7 @@
                     @endif
 
                     <!-- Position Change Fields -->
-                    @if ($movementType == 'position_change')
+                    @if (in_array($movementType, ['promotion', 'demotion']))
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
                                 <div>

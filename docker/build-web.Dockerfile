@@ -1,5 +1,10 @@
 FROM bagusp/absence:latest
 
+# Create PHP configuration for error logging
+RUN mkdir -p /usr/local/etc/php/conf.d && \
+    echo "error_log = /dev/stderr" > /usr/local/etc/php/conf.d/99-docker.ini && \
+    echo "log_errors = On" >> /usr/local/etc/php/conf.d/99-docker.ini
+
 COPY composer.json composer.lock /app/
 
 COPY . /app

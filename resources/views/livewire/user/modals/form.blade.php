@@ -13,19 +13,31 @@
 
         <flux:input label="Email" placeholder="Masukkan Email" wire:model="email" />
 
-        <flux:select label="Akses" wire:model="role" placeholder="Pilih Akses...">
-            <flux:select.option value="admin">ADMIN</flux:select.option>
-            <flux:select.option value="leader">KEPALA TOKO</flux:select.option>
-            <flux:select.option value="employee">KARYAWAN</flux:select.option>
-        </flux:select>
+        @if ($isEdit)
+            <div class="md:col-span-2">
+                <flux:select label="Akses" wire:model="role" placeholder="Pilih Akses...">
+                    <flux:select.option value="admin">ADMIN</flux:select.option>
+                    <flux:select.option value="leader">KEPALA TOKO</flux:select.option>
+                    <flux:select.option value="employee">KARYAWAN</flux:select.option>
+                </flux:select>
+            </div>
+        @else
+            <flux:select label="Akses" wire:model="role" placeholder="Pilih Akses...">
+                <flux:select.option value="admin">ADMIN</flux:select.option>
+                <flux:select.option value="leader">KEPALA TOKO</flux:select.option>
+                <flux:select.option value="employee">KARYAWAN</flux:select.option>
+            </flux:select>
+        @endif
 
-        <flux:select label="Cabang" wire:model="branchId" placeholder="Pilih Cabang...">
-            @foreach ($branches as $item)
-                <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
-            @endforeach
-        </flux:select>
+        @if (!$isEdit)
+            <flux:select label="Cabang" wire:model="branchId" placeholder="Pilih Cabang...">
+                @foreach ($branches as $item)
+                    <flux:select.option value="{{ $item['value'] }}">{{ $item['label'] }}</flux:select.option>
+                @endforeach
+            </flux:select>
 
-        <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
+            <flux:input label="Jabatan" placeholder="Masukkan Jabatan" wire:model="position" />
+        @endif
 
         <div class="col-span-2">
             <flux:field label="Shift">
