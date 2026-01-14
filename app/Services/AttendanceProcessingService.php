@@ -223,6 +223,7 @@ class AttendanceProcessingService
 
                         if ($isOvertimeApproved) {
                             $overtimeHours = round($clockOutTime->diffInMinutes($shiftEnd) / 60, 2);
+                            $overtimeHours = abs(min($overtimeHours, 4)); // Cap overtime at 4 hours per shift
                         }
                     }
                 }

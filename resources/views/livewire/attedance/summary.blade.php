@@ -151,12 +151,17 @@ new class extends Component {
             return;
         }
 
-        // Redirect to PDF download
-        return redirect()->route('attendance.export-pdf', [
+        // Open PDF download in new tab
+        $url = route('attendance.export-pdf', [
             'employeeId' => $this->exportEmployeeId,
             'startDate' => $this->exportStartDate,
             'endDate' => $this->exportEndDate,
         ]);
+
+        $this->js('window.open("' . $url . '", "_blank")');
+
+        $this->modal('export-attendance-modal')->close();
+        $this->resetExportForm();
     }
 
     /**

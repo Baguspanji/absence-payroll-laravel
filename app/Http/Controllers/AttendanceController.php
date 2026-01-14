@@ -123,6 +123,7 @@ class AttendanceController extends Controller
 
         $filename = "rekap-absensi-{$employee->nip}-{$startDate->format('Y-m-d')}-{$endDate->format('Y-m-d')}.pdf";
 
-        return $pdf->download($filename);
+        return $pdf->stream($filename);
+        // return $pdf->download($filename);
     }
 }

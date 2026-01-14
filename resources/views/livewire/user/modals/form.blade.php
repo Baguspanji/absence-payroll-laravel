@@ -55,6 +55,16 @@
             <flux:input label="Foto Karyawan" type="file" wire:model="photo" />
         </div>
 
+        <flux:input label="Tahun Masuk" type="date" wire:model="inDate" />
+
+        <flux:input label="Tahun Keluar" type="date" wire:model="outDate" />
+
+        <flux:input label="Nomor BPJS" placeholder="Masukkan Nomor BPJS" wire:model="bpjsCardNumber" />
+
+        <div class="flex md:col-span-2">
+            <flux:checkbox wire:model="isActiveBpjs" label="Status BPJS Aktif" />
+        </div>
+
         <div class="flex md:col-span-2">
             <flux:spacer />
             <flux:button type="button" wire:click="submitEmployee" variant="primary">Simpan</flux:button>

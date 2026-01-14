@@ -11,8 +11,7 @@
                     <h3 class="font-semibold text-lg text-gray-800 mb-2">Informasi Karyawan</h3>
                     <div class="flex md:flex-row-reverse gap-6 justify-between">
                         <div>
-                            <img src="{{ $photo }}" alt="Foto Karyawan"
-                                class="w-24 rounded-md object-cover" />
+                            <img src="{{ $photo }}" alt="Foto Karyawan" class="w-24 rounded-md object-cover" />
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-sm min-w-sm">
                             <div>NIP/PIN</div>
@@ -48,6 +47,52 @@
 
                             <div>Jabatan</div>
                             <div class="col-span-2">{{ $position }}</div>
+
+                            <div>Tahun Masuk</div>
+                            <div class="col-span-2">
+                                {{ $inDate ? \Carbon\Carbon::parse($inDate)->translatedFormat('d F Y') : '-' }}</div>
+
+                            <div>Tahun Keluar</div>
+                            <div class="col-span-2">
+                                {{ $outDate ? \Carbon\Carbon::parse($outDate)->translatedFormat('d F Y') : '-' }}</div>
+
+                            <div>Masa Khidmah</div>
+                            <div class="col-span-2">
+                                @php
+                                    $masaKhidmah = '-';
+                                    if ($inDate) {
+                                        $masaKhidmah = \Carbon\Carbon::parse($inDate)->diffForHumans(
+                                            \Carbon\Carbon::now(),
+                                        );
+                                    } elseif ($inDate && $outDate) {
+                                        $masaKhidmah = \Carbon\Carbon::parse($inDate)->diffForHumans(
+                                            \Carbon\Carbon::parse($outDate),
+                                        );
+                                    }
+
+                                    if ($masaKhidmah != '-') {
+                                        $inCarbon = \Carbon\Carbon::parse($inDate);
+                                        $endCarbon = $outDate ? \Carbon\Carbon::parse($outDate) : \Carbon\Carbon::now();
+                                        $diff = $inCarbon->diff($endCarbon);
+                                        $masaKhidmah = $diff->y . ' Tahun ' . $diff->m . ' Bulan ' . $diff->d . ' Hari';
+                                    }
+                                @endphp
+                                {{ $masaKhidmah }}
+                            </div>
+
+                            <div>Nomor BPJS</div>
+                            <div class="col-span-2">{{ $bpjsCardNumber ?: '-' }}</div>
+
+                            <div>Status BPJS</div>
+                            <div class="col-span-2">
+                                @if ($isActiveBpjs)
+                                    <span
+                                        class="text-xs font-bold px-2 py-1 rounded-md bg-green-100 text-green-800">AKTIF</span>
+                                @else
+                                    <span class="text-xs font-bold px-2 py-1 rounded-md bg-red-100 text-red-800">TIDAK
+                                        AKTIF</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -79,12 +124,10 @@
                         </button>
                     </div>
 
-                    <x-table :headers="['Nama Gaji', 'Tipe', 'Jumlah', 'Aksi']" :rows="$payrollComponents"
-                        emptyMessage="Tidak ada komponen gaji yang ditetapkan">
+                    <x-table :headers="['Nama Gaji', 'Tipe', 'Jumlah', 'Aksi']" :rows="$payrollComponents" emptyMessage="Tidak ada komponen gaji yang ditetapkan">
                         @foreach ($payrollComponents as $index => $item)
                             <x-table.row>
-                                <x-table.cell
-                                    class="px-3 py-2 whitespace-nowrap">{{ $item->name }}</x-table.cell>
+                                <x-table.cell class="px-3 py-2 whitespace-nowrap">{{ $item->name }}</x-table.cell>
                                 <x-table.cell class="px-3 py-2">
                                     {{ $item->pivot?->type == 'earning' ? 'Pendapatan' : 'Potongan' }}
                                 </x-table.cell>

@@ -22,6 +22,11 @@ class Employee extends Model
         'nip',
         'name',
         'position',
+        'in_date',
+        'out_date',
+        'contract_end_date',
+        'bpjs_card_number',
+        'is_active_bpjs',
         'image_url',
     ];
 
@@ -38,6 +43,11 @@ class Employee extends Model
     public function schedule(): HasOne
     {
         return $this->hasOne(Schedule::class);
+    }
+
+    public function contract()
+    {
+        return $this->hasOne(EmployeeContract::class);
     }
 
     public function schedules()

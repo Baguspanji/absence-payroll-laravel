@@ -19,6 +19,8 @@ new class extends Component {
 
     public $search = '';
     public $filterBranch = '';
+    public $filterAccess = '';
+    public $filterJob = '';
 
     public $isEdit = false;
     public $userId = null;
@@ -34,13 +36,20 @@ new class extends Component {
     #[Rule('nullable', 'image', 'max:2048', message: 'Foto harus berupa gambar dengan ukuran maksimal 2MB.')]
     public $photo = null;
 
+    #[Rule('required', message: 'Posisi harus diisi.')]
     public $position = '';
+    public $inDate = '';
+    public $outDate = '';
+    public $bpjsCardNumber = '';
+    public $isActiveBpjs = false;
     #[Rule('required', message: 'Cabang harus dipilih.')]
     public $branchId = '';
 
     public $branches = [];
     #[Rule('required', message: 'Cabang harus dipilih.')]
     public $shiftIds = [];
+
+    public $jobs = [];
 
     public $shifts = [];
 
@@ -94,6 +103,9 @@ new class extends Component {
             })
             ->toArray();
 
+        $employeePerPosition = Employee::select('position')->groupBy('position')->get();
+        $this->jobs = $employeePerPosition->pluck('position')->filter(fn($position) => !empty($position))->toArray();
+
         $this->optionPayrollComponents = PayrollComponent::get()
             ->map(function ($component) {
                 return [
@@ -127,6 +139,16 @@ new class extends Component {
         if ($this->filterBranch) {
             $query->whereHas('employee', function ($eq) {
                 $eq->where('branch_id', $this->filterBranch);
+            });
+        }
+
+        if ($this->filterAccess) {
+            $query->where('role', $this->filterAccess);
+        }
+
+        if ($this->filterJob) {
+            $query->whereHas('employee', function ($eq) {
+                $eq->where('position', $this->filterJob);
             });
         }
 
@@ -229,6 +251,11 @@ new class extends Component {
         $this->photo = $user->employee?->image_url;
 
         $this->position = $user->employee?->position;
+        $this->inDate = $user->employee?->in_date;
+        $this->outDate = $user->employee?->out_date;
+        $this->bpjsCardNumber = $user->employee?->bpjs_card_number;
+        $this->isActiveBpjs = $user->employee?->is_active_bpjs;
+
         $this->branchId = $user->employee?->branch_id;
         $this->schedules = $user->employee?->schedules;
 
@@ -251,6 +278,11 @@ new class extends Component {
         // $this->photo = $user->employee?->image_url;
 
         $this->position = $user->employee?->position;
+        $this->inDate = $user->employee?->in_date;
+        $this->outDate = $user->employee?->out_date;
+        $this->bpjsCardNumber = $user->employee?->bpjs_card_number;
+        $this->isActiveBpjs = $user->employee?->is_active_bpjs;
+
         $this->branchId = $user->employee?->branch_id;
         $this->shiftIds = $user->employee?->schedules?->pluck('shift_id')->toArray();
 
@@ -473,6 +505,10 @@ new class extends Component {
                 'nip' => $this->nip,
                 'name' => $this->name,
                 'position' => $this->position,
+                'in_date' => $this->inDate,
+                'out_date' => $this->outDate,
+                'bpjs_card_number' => $this->bpjsCardNumber,
+                'is_active_bpjs' => $this->isActiveBpjs,
                 'image_url' => $imageUrl,
             ]);
 
@@ -504,6 +540,10 @@ new class extends Component {
             $employee->branch_id = $this->branchId;
             $employee->name = $this->name;
             $employee->position = $this->position;
+            $employee->in_date = $this->inDate;
+            $employee->out_date = $this->outDate;
+            $employee->bpjs_card_number = $this->bpjsCardNumber;
+            $employee->is_active_bpjs = $this->isActiveBpjs;
             if ($imageUrl) {
                 $employee->image_url = $imageUrl;
             }
@@ -551,7 +591,6 @@ new class extends Component {
             //     EmployeeHistoryMovement::create($historyMovement);
             // }
 
-
             $this->dispatch('alert-shown', message: 'Data pengguna berhasil diperbarui!', type: 'success');
         }
 
@@ -569,6 +608,10 @@ new class extends Component {
         $this->role = '';
         $this->branchId = '';
         $this->position = '';
+        $this->inDate = '';
+        $this->outDate = '';
+        $this->bpjsCardNumber = '';
+        $this->isActiveBpjs = false;
         $this->shiftIds = [];
     }
 }; ?>
@@ -593,6 +636,22 @@ new class extends Component {
                 <option value="">Semua Cabang</option>
                 @foreach ($branches as $branch)
                     <option value="{{ $branch['value'] }}">{{ $branch['label'] }}</option>
+                @endforeach
+            </flux:select>
+        </div>
+        <div class="w-64">
+            <flux:select wire:model.live="filterAccess" placeholder="Pilih Akses...">
+                <option value="">Semua Akses</option>
+                <option value="admin">ADMIN</option>
+                <option value="leader">KEPALA TOKO</option>
+                <option value="employee">KARYAWAN</option>
+            </flux:select>
+        </div>
+        <div class="w-64">
+            <flux:select wire:model.live="filterJob" placeholder="Pilih Jabatan...">
+                <option value="">Semua Jabatan</option>
+                @foreach ($jobs as $job)
+                    <option value="{{ $job }}">{{ $job }}</option>
                 @endforeach
             </flux:select>
         </div>
@@ -655,12 +714,14 @@ new class extends Component {
                 </x-table.cell>
                 <x-table.cell class="whitespace-nowrap w-[10%]">
                     <!-- Detail Employee Button -->
-                    <x-button-tooltip tooltip="Lihat detail" icon="eye" wire:click="detailEmployee({{ $request->id }})"
+                    <x-button-tooltip tooltip="Lihat detail" icon="eye"
+                        wire:click="detailEmployee({{ $request->id }})"
                         class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>
                     <!-- Edit Employee Button -->
-                    <x-button-tooltip tooltip="Edit data" icon="pencil-square" wire:click="editEmployee({{ $request->id }})"
+                    <x-button-tooltip tooltip="Edit data" icon="pencil-square"
+                        wire:click="editEmployee({{ $request->id }})"
                         class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
                         iconClass="w-4 h-4 inline-block -mt-1">
                     </x-button-tooltip>

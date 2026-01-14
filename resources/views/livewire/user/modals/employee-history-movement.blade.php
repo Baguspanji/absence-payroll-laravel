@@ -205,7 +205,7 @@
                                 Hapus
                             </flux:button>
                         @endif
-                        <flux:button wire:click="$set('isEditingMovement', false); resetMovementForm()"
+                        <flux:button x-on:click="$flux.modal('employee-history-movement').close()"
                             variant="ghost" size="sm" class="w-xs">
                             Batal
                         </flux:button>
