@@ -5,6 +5,7 @@ use App\Models\User;
 use App\Models\Employee;
 use App\Models\EmployeeSaving;
 use App\Models\EmployeeHistoryMovement;
+use App\Models\EmployeeContract;
 use App\Models\Branch;
 use App\Models\Schedule;
 use App\Models\Shift;
@@ -81,6 +82,20 @@ new class extends Component {
 
     public $nowBranchId = null;
     public $nowPosition = null;
+
+    // Contract form properties
+    public $isEditingContract = false;
+    public $selectedContractId = null;
+    public $selectedContractEmployeeId = null;
+    public $employeeContractName = '';
+    public $employeeContracts = [];
+    public $contractNumber = '';
+    public $contractType = '';
+    public $contractStartDate = '';
+    public $contractEndDate = '';
+    public $contractStatus = '';
+    public $contractFile = null;
+    public $contractFilePath = '';
 
     public function mount()
     {
@@ -441,6 +456,139 @@ new class extends Component {
         $this->fromBranchId = $this->nowBranchId;
     }
 
+    public function openEmployeeContractModal($employeeId)
+    {
+        $employee = Employee::with('contracts')->find($employeeId);
+
+        if (!$employee) {
+            return;
+        }
+
+        $this->selectedContractEmployeeId = $employeeId;
+        $this->employeeContractName = $employee->name;
+        $this->employeeContracts = $employee->contracts()->latest('created_at')->get();
+        $this->isEditingContract = false;
+
+        $this->resetContractForm();
+
+        $this->modal('employee-contract')->show();
+    }
+
+    public function createContractForm()
+    {
+        $this->isEditingContract = false;
+        $this->selectedContractId = null;
+
+        $this->resetContractForm();
+    }
+
+    public function editContractForm($contractId)
+    {
+        $contract = EmployeeContract::find($contractId);
+
+        if (!$contract) {
+            return;
+        }
+
+        $this->isEditingContract = true;
+        $this->selectedContractId = $contractId;
+        $this->contractNumber = $contract->contract_number;
+        $this->contractType = $contract->contract_type;
+        $this->contractStartDate = $contract->start_date?->format('Y-m-d') ?? '';
+        $this->contractEndDate = $contract->end_date?->format('Y-m-d') ?? '';
+        $this->contractStatus = $contract->status;
+        $this->contractFilePath = $contract->file_path ?? '';
+    }
+
+    public function saveContract()
+    {
+        $this->validate([
+            'contractNumber' => 'required|string|max:255',
+            'contractType' => 'required|string',
+            'contractStartDate' => 'required|date',
+            'contractEndDate' => 'required|date|after:contractStartDate',
+            'contractStatus' => 'required|in:active,inactive,expired',
+            'contractFile' => 'nullable|file|max:5120|mimes:pdf,doc,docx',
+        ]);
+
+        if (!$this->selectedContractEmployeeId) {
+            return;
+        }
+
+        $filePath = null;
+
+        if ($this->contractFile) {
+            $filePath = $this->contractFile->store('contracts', 'public');
+            $filePath = '/storage/' . $filePath;
+        }
+
+        if ($this->isEditingContract && $this->selectedContractId) {
+            // Update existing contract
+            $contract = EmployeeContract::find($this->selectedContractId);
+            $contract->update([
+                'contract_number' => $this->contractNumber,
+                'contract_type' => $this->contractType,
+                'start_date' => $this->contractStartDate,
+                'end_date' => $this->contractEndDate,
+                'status' => $this->contractStatus,
+                'file_path' => $filePath ?: $contract->file_path,
+            ]);
+
+            Employee::find($this->selectedContractEmployeeId)->update([
+                'contract_end_date' => $this->contractEndDate,
+            ]);
+
+            $this->dispatch('alert-shown', message: 'Kontrak berhasil diperbarui!', type: 'success');
+        } else {
+            // Create new contract
+            EmployeeContract::create([
+                'employee_id' => $this->selectedContractEmployeeId,
+                'contract_number' => $this->contractNumber,
+                'contract_type' => $this->contractType,
+                'start_date' => $this->contractStartDate,
+                'end_date' => $this->contractEndDate,
+                'status' => $this->contractStatus,
+                'file_path' => $filePath,
+            ]);
+
+            Employee::find($this->selectedContractEmployeeId)->update([
+                'contract_end_date' => $this->contractEndDate,
+            ]);
+
+            $this->dispatch('alert-shown', message: 'Kontrak berhasil ditambahkan!', type: 'success');
+        }
+
+        // Refresh the list
+        $this->openEmployeeContractModal($this->selectedContractEmployeeId);
+    }
+
+    public function deleteContract($contractId)
+    {
+        $contract = EmployeeContract::find($contractId);
+
+        if ($contract && $contract->file_path) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $contract->file_path));
+        }
+
+        EmployeeContract::destroy($contractId);
+
+        $this->dispatch('alert-shown', message: 'Kontrak berhasil dihapus!', type: 'success');
+
+        // Refresh the list
+        $this->openEmployeeContractModal($this->selectedContractEmployeeId);
+    }
+
+    public function resetContractForm()
+    {
+        $this->contractNumber = '';
+        $this->contractType = '';
+        $this->contractStartDate = '';
+        $this->contractEndDate = '';
+        $this->contractStatus = '';
+        $this->contractFile = null;
+        $this->contractFilePath = '';
+    }
+
     public function openWidrawalModal()
     {
         $this->withdrawalAmount = 0;
@@ -657,7 +805,7 @@ new class extends Component {
         </div>
     </div>
 
-    <x-table :headers="['Karyawan', 'Cabang', 'Akses', 'Status', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data pengguna." fixedHeader="true"
+    <x-table :headers="['Karyawan', 'Cabang', 'Akses', 'Kontrak Berakhir', 'Status', 'Status BPJS', 'Aksi']" :rows="$requests" emptyMessage="Tidak ada data pengguna." fixedHeader="true"
         maxHeight="540px">
         @foreach ($requests as $request)
             <x-table.row>
@@ -699,6 +847,9 @@ new class extends Component {
                         -
                     @endif
                 </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    {{ $request->employee?->contract_end_date ? \Carbon\Carbon::parse($request->employee?->contract_end_date)->translatedFormat('d F Y') : '-' }}
+                </x-table.cell>
                 <x-table.cell>
                     @if ($request->is_active)
                         <span class="text-xs text-white px-2 py-1.5 bg-green-600 rounded-md cursor-pointer"
@@ -712,31 +863,38 @@ new class extends Component {
                         </span>
                     @endif
                 </x-table.cell>
+                <x-table.cell class="whitespace-nowrap">
+                    @if ($request->employee?->is_active_bpjs)
+                        <span class="text-xs text-white px-2 py-1.5 bg-green-600 rounded-md cursor-pointer">
+                            Aktif
+                        </span>
+                    @else
+                        <span class="text-xs text-white px-2 py-1.5 bg-red-400 rounded-md cursor-pointer">
+                            Tidak Aktif
+                        </span>
+                    @endif
+                </x-table.cell>
                 <x-table.cell class="whitespace-nowrap w-[10%]">
-                    <!-- Detail Employee Button -->
-                    <x-button-tooltip tooltip="Lihat detail" icon="eye"
-                        wire:click="detailEmployee({{ $request->id }})"
-                        class="text-sm text-gray-600 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer"
-                        iconClass="w-4 h-4 inline-block -mt-1">
-                    </x-button-tooltip>
-                    <!-- Edit Employee Button -->
-                    <x-button-tooltip tooltip="Edit data" icon="pencil-square"
-                        wire:click="editEmployee({{ $request->id }})"
-                        class="text-sm text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 cursor-pointer"
-                        iconClass="w-4 h-4 inline-block -mt-1">
-                    </x-button-tooltip>
-                    <!-- Manage Savings Button -->
-                    <x-button-tooltip tooltip="Kelola tabungan" icon="banknotes"
-                        wire:click="tabungan({{ $request->id }})"
-                        class="text-sm text-green-600 px-2 py-1 rounded hover:bg-green-100 cursor-pointer"
-                        iconClass="w-4 h-4 inline-block -mt-1">
-                    </x-button-tooltip>
-                    <!-- History Movement Button -->
-                    <x-button-tooltip tooltip="Riwayat Pergerakan" icon="arrow-trending-up"
-                        wire:click="openEmployeeHistoryMovement({{ $request->employee?->id }})"
-                        class="text-sm text-blue-600 px-2 py-1 rounded hover:bg-blue-100 cursor-pointer"
-                        iconClass="w-4 h-4 inline-block -mt-1">
-                    </x-button-tooltip>
+                    <flux:dropdown>
+                        <flux:button icon="ellipsis-horizontal" variant="subtle" size="sm" />
+                        <flux:menu>
+                            <flux:menu.item icon="eye" wire:click="detailEmployee({{ $request->id }})">
+                                Lihat Detail
+                            </flux:menu.item>
+                            <flux:menu.item icon="pencil-square" wire:click="editEmployee({{ $request->id }})">
+                                Edit Data
+                            </flux:menu.item>
+                            <flux:menu.item icon="banknotes" wire:click="tabungan({{ $request->id }})">
+                                Kelola Tabungan
+                            </flux:menu.item>
+                            <flux:menu.item icon="arrow-trending-up" wire:click="openEmployeeHistoryMovement({{ $request->employee?->id }})">
+                                Riwayat Pergerakan
+                            </flux:menu.item>
+                            <flux:menu.item icon="document-text" wire:click="openEmployeeContractModal({{ $request->employee?->id }})">
+                                Kelola Kontrak
+                            </flux:menu.item>
+                        </flux:menu>
+                    </flux:dropdown>
                 </x-table.cell>
             </x-table.row>
         @endforeach
@@ -752,4 +910,5 @@ new class extends Component {
     @include('livewire.user.modals.employee-saving')
     @include('livewire.user.modals.withdrawal')
     @include('livewire.user.modals.employee-history-movement')
+    @include('livewire.user.modals.employee-contract')
 </div>

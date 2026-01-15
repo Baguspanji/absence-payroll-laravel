@@ -16,6 +16,11 @@ class EmployeeContract extends Model
         'file_path',
     ];
 
+    protected $casts = [
+        'start_date' => 'date',
+        'end_date' => 'date',
+    ];
+
     public function employee()
     {
         return $this->belongsTo(Employee::class);

@@ -50,6 +50,11 @@ class Employee extends Model
         return $this->hasOne(EmployeeContract::class);
     }
 
+    public function contracts()
+    {
+        return $this->hasMany(EmployeeContract::class);
+    }
+
     public function schedules()
     {
         return $this->hasMany(Schedule::class);

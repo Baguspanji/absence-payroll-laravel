@@ -1,5 +1,5 @@
 <!-- Modal Detail -->
-<flux:modal name="detail-data" class="md:w-4xl">
+<flux:modal name="detail-data" class="md:min-w-2xl">
     <div class="space-y-4">
         <div>
             <flux:heading size="lg">Detail Pengguna</flux:heading>
