@@ -70,12 +70,11 @@ new class extends Component {
 
             <form wire:submit="submit" class="space-y-4">
                 {{-- Dropdown Karyawan (hanya untuk Admin/Manajer) --}}
-                @if (Auth::user()->role !== 'employee') {{-- Sesuaikan dengan logic role Anda --}}
-                    <flux:select label="Karyawan" wire:model="employeeId" placeholder="Pilih Karyawan...">
-                        @foreach ($employees as $employee)
-                            <flux:select.option value="{{ $employee->id }}">{{ $employee->name }}</flux:select.option>
-                        @endforeach
-                    </flux:select>
+                @if (Auth::user()->role !== 'employee')
+                    {{-- Sesuaikan dengan logic role Anda --}}
+                    <x-select-searchable :items="$employees" modelName="employeeId" :modelValue="$employeeId"
+                        displayProperty="name" valueProperty="id" placeholder="Pilih Pegawai"
+                        searchPlaceholder="Cari Pegawai..." />
                 @endif
 
                 {{-- Tanggal Lembur --}}
