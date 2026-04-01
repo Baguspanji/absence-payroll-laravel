@@ -46,6 +46,16 @@ new class extends Component {
     #[Rule('required', message: 'Tanggal akhir harus diisi.')]
     public $exportEndDate = '';
 
+    // Export Excel Batch form properties
+    #[Rule('required', message: 'Cabang harus dipilih.')]
+    public $exportBatchBranchId = '';
+
+    #[Rule('required', message: 'Tanggal mulai harus diisi.')]
+    public $exportBatchStartDate = '';
+
+    #[Rule('required', message: 'Tanggal akhir harus diisi.')]
+    public $exportBatchEndDate = '';
+
     public function mount()
     {
         $this->branches = Branch::select('id', 'name')->get();
@@ -84,6 +94,54 @@ new class extends Component {
         $this->exportEmployeeId = '';
         $this->exportStartDate = '';
         $this->exportEndDate = '';
+    }
+
+    public function openExportBatchForm()
+    {
+        $this->resetExportBatchForm();
+        $this->modal('export-batch-attendance-modal')->show();
+    }
+
+    public function resetExportBatchForm()
+    {
+        $this->exportBatchBranchId = '';
+        $this->exportBatchStartDate = '';
+        $this->exportBatchEndDate = '';
+    }
+
+    public function exportExcelBatch()
+    {
+        $this->validate(
+            [
+                'exportBatchBranchId' => 'required',
+                'exportBatchStartDate' => 'required|date',
+                'exportBatchEndDate' => 'required|date|after_or_equal:exportBatchStartDate',
+            ],
+            [
+                'exportBatchBranchId.required' => 'Cabang harus dipilih.',
+                'exportBatchStartDate.required' => 'Tanggal mulai harus diisi.',
+                'exportBatchEndDate.required' => 'Tanggal akhir harus diisi.',
+                'exportBatchEndDate.after_or_equal' => 'Tanggal akhir harus sama atau setelah tanggal mulai.',
+            ],
+        );
+
+        $branch = \App\Models\Branch::find($this->exportBatchBranchId);
+        if (!$branch) {
+            $this->dispatch('alert-shown', message: 'Cabang tidak ditemukan!', type: 'error');
+            return;
+        }
+
+        // Open Excel download in new tab
+        $url = route('attendance.export-excel-branch', [
+            'branchId' => $this->exportBatchBranchId,
+            'startDate' => $this->exportBatchStartDate,
+            'endDate' => $this->exportBatchEndDate,
+        ]);
+
+        $this->js('window.open("' . $url . '", "_blank")');
+
+        $this->modal('export-batch-attendance-modal')->close();
+        $this->resetExportBatchForm();
     }
 
     public function reprocessAttendance()
@@ -220,6 +278,13 @@ new class extends Component {
                 <flux:icon name="arrow-down-tray" class="w-4 h-4 inline-block -mt-1" />
                 Export PDF
             </button>
+            @can('admin')
+                <button class="text-sm px-2 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 cursor-pointer"
+                    wire:click="openExportBatchForm">
+                    <flux:icon name="arrow-down-tray" class="w-4 h-4 inline-block -mt-1" />
+                    Export Excel (Batch Cabang)
+                </button>
+            @endcan
             <button class="text-sm px-2 py-1.5 bg-orange-600 text-white rounded hover:bg-orange-700 cursor-pointer"
                 wire:click="openReprocessForm">
                 <flux:icon name="arrow-path" class="w-4 h-4 inline-block -mt-1" />
@@ -403,6 +468,38 @@ new class extends Component {
                 <flux:button type="button" wire:click="resetExportForm" variant="ghost">Batal</flux:button>
                 <flux:button type="button" wire:click="exportPdf" variant="primary">
                     Download PDF
+                </flux:button>
+            </div>
+        </div>
+    </flux:modal>
+
+    <!-- Export Attendance Excel Batch Modal -->
+    <flux:modal name="export-batch-attendance-modal" class="md:w-96">
+        <div class="space-y-4">
+            <div>
+                <flux:heading size="lg">Export Rekap Absensi Excel (Batch Cabang)</flux:heading>
+            </div>
+
+            <flux:select label="Cabang" placeholder="Pilih Cabang" wire:model="exportBatchBranchId">
+                <flux:select.option value="">Pilih Cabang</flux:select.option>
+                @foreach ($branches as $branch)
+                    <flux:select.option value="{{ $branch->id }}">
+                        {{ $branch->name }}
+                    </flux:select.option>
+                @endforeach
+            </flux:select>
+
+            <flux:input type="date" label="Tanggal Mulai" placeholder="Pilih Tanggal Mulai"
+                wire:model="exportBatchStartDate" />
+
+            <flux:input type="date" label="Tanggal Akhir" placeholder="Pilih Tanggal Akhir"
+                wire:model="exportBatchEndDate" />
+
+            <div class="flex gap-2">
+                <flux:spacer />
+                <flux:button type="button" wire:click="resetExportBatchForm" variant="ghost">Batal</flux:button>
+                <flux:button type="button" wire:click="exportExcelBatch" variant="primary">
+                    Download Excel
                 </flux:button>
             </div>
         </div>

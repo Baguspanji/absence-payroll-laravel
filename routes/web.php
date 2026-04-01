@@ -1,8 +1,8 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\FingerprintController;
 use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\AttendanceController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Livewire\Volt\Volt;
@@ -12,7 +12,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('dashboard', fn() =>view('dashboard'))->name('dashboard');
+    Route::get('dashboard', fn () => view('dashboard'))->name('dashboard');
     Route::get('ajax-dashboard-attendance', [AttendanceController::class, 'ajaxDashboardData'])->name('ajax.dashboard.data');
 
     Route::redirect('settings', 'settings/profile');
@@ -65,6 +65,7 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('ajukan-lembur', 'overtime.request-form')->name('overtime.create');
 
     Route::get('/attendance/export-pdf', [AttendanceController::class, 'exportPdf'])->name('attendance.export-pdf');
+    Route::get('/attendance/export-excel-branch', [AttendanceController::class, 'exportExcelBranch'])->name('attendance.export-excel-branch');
 });
 
 // Group all iclock routes under the log.iclock middleware
