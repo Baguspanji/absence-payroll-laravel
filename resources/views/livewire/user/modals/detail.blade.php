@@ -48,6 +48,12 @@
                             <div>Jabatan</div>
                             <div class="col-span-2">{{ $position }}</div>
 
+                            <div>Alamat</div>
+                            <div class="col-span-2">{{ $address }}</div>
+
+                            <div>No. Hp</div>
+                            <div class="col-span-2">{{ $phone }}</div>
+
                             <div>Tahun Masuk</div>
                             <div class="col-span-2">
                                 {{ $inDate ? \Carbon\Carbon::parse($inDate)->translatedFormat('d F Y') : '-' }}</div>

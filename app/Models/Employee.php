@@ -21,6 +21,8 @@ class Employee extends Model
         'branch_id',
         'nip',
         'name',
+        'address',
+        'phone',
         'position',
         'in_date',
         'out_date',
@@ -88,6 +90,6 @@ class Employee extends Model
         $latestEmployee = self::orderBy('nip', 'desc')->first();
         $nextNumber = $latestEmployee ? (int) substr($latestEmployee->nip, -4) + 1 : 1;
 
-        return date('Y') . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+        return date('Y').str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }

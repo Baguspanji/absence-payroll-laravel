@@ -39,6 +39,10 @@ new class extends Component {
 
     #[Rule('required', message: 'Posisi harus diisi.')]
     public $position = '';
+    #[Rule('required', message: 'Alamat harus diisi.')]
+    public $address = '';
+    #[Rule('required', message: 'No. Hp harus diisi.')]
+    public $phone = '';
     public $inDate = '';
     public $outDate = '';
     public $bpjsCardNumber = '';
@@ -266,6 +270,8 @@ new class extends Component {
         $this->photo = $user->employee?->image_url;
 
         $this->position = $user->employee?->position;
+        $this->address = $user->employee?->address;
+        $this->phone = $user->employee?->phone;
         $this->inDate = $user->employee?->in_date;
         $this->outDate = $user->employee?->out_date;
         $this->bpjsCardNumber = $user->employee?->bpjs_card_number;
@@ -293,6 +299,8 @@ new class extends Component {
         // $this->photo = $user->employee?->image_url;
 
         $this->position = $user->employee?->position;
+        $this->address = $user->employee?->address;
+        $this->phone = $user->employee?->phone;
         $this->inDate = $user->employee?->in_date;
         $this->outDate = $user->employee?->out_date;
         $this->bpjsCardNumber = $user->employee?->bpjs_card_number;
@@ -653,6 +661,8 @@ new class extends Component {
                 'nip' => $this->nip,
                 'name' => $this->name,
                 'position' => $this->position,
+                'address' => $this->address,
+                'phone' => $this->phone,
                 'in_date' => $this->inDate,
                 'out_date' => $this->outDate,
                 'bpjs_card_number' => $this->bpjsCardNumber,
@@ -688,6 +698,8 @@ new class extends Component {
             $employee->branch_id = $this->branchId;
             $employee->name = $this->name;
             $employee->position = $this->position;
+            $employee->address = $this->address;
+            $employee->phone = $this->phone;
             $employee->in_date = $this->inDate;
             $employee->out_date = $this->outDate;
             $employee->bpjs_card_number = $this->bpjsCardNumber;
@@ -761,6 +773,8 @@ new class extends Component {
         $this->bpjsCardNumber = '';
         $this->isActiveBpjs = false;
         $this->shiftIds = [];
+        $this->address = '';
+        $this->phone = '';
     }
 }; ?>
 

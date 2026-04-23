@@ -59,6 +59,12 @@
 
         <flux:input label="Tahun Keluar" type="date" wire:model="outDate" />
 
+        <div class="md:col-span-2">
+            <flux:textarea label="Alamat" placeholder="Masukkan Alamat" wire:model="address" rows="3" />
+        </div>
+
+        <flux:input label="No. Hp" placeholder="Masukkan No. Hp" wire:model="phone" />
+
         <flux:input label="Nomor BPJS" placeholder="Masukkan Nomor BPJS" wire:model="bpjsCardNumber" />
 
         <div class="flex md:col-span-2">
