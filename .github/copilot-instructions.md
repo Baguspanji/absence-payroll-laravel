@@ -11,10 +11,10 @@
 - Frontend: Vite + Tailwind 4 (see `vite.config.js`).
 - Tests: Pest configured. Use `composer test` (clears config cache then `artisan test`). `tests/Pest.php` binds `RefreshDatabase` for Feature tests.
 
-## Runtime via Docker (Octane/FrankenPHP)
-- `docker-compose.yaml` builds `build.Dockerfile` (FrankenPHP base). Supervisor starts:
-  - `php artisan octane:frankenphp` (HTTP worker), and `php artisan schedule:run` (scheduler). App served on :8000 inside container, published as host :8001.
-- `public/frankenphp-worker.php` boots the Octane worker.
+## Runtime via Docker (Apache)
+- `docker-compose.yaml` builds `docker/Dockerfile` (PHP 8.4 + Apache base). Supervisor starts:
+  - `apache2-foreground` (HTTP worker), `php artisan queue:work` (queue worker), and `php artisan schedule:work` (scheduler). App served on port 80 inside container, published as host `${DOCKER_APP_PORT}`.
+- Standard Apache index.php boots the application.
 
 ## Routing and UI conventions (Volt)
 - Volt routes in `routes/web.php` like `Volt::route('settings/profile', 'settings.profile')` map to `resources/views/livewire/settings/profile.blade.php`.

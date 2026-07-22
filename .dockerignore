@@ -17,9 +17,8 @@ pnpm-debug.log
 yarn-error.log
 build/
 dist/
-docker/build.Dockerfile
-docker/build-web.Dockerfile
-docker/build-scheduler.Dockerfile
+docker/Dockerfile
+frankenphp
 coverage/
 storage/logs/*
 storage/app/*
